@@ -20,7 +20,8 @@
 /out/
 /.open-next/
 /.wrangler/
-/cloudflare-env.d.ts
+/.wrangler-dry-run/
+/worker-configuration.d.ts
 
 # production
 /build

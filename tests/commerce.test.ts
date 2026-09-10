@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { commerceTestOffer, createGuestPurchaseCapability, hashGuestPurchaseCapability, validateCommerceAttemptRequest } from "../lib/commerce/contract";
+import type postgres from "postgres";
+import { resolveCommerceDatabaseRuntime, withRequestOwnedCommerceDatabase } from "../lib/commerce/database-runtime";
 
 test("internal commerce fixture is fixed to one test-only THB offer", () => {
   assert.deepEqual({ amountMinor: commerceTestOffer.amountMinor, currency: commerceTestOffer.currency, quantity: commerceTestOffer.quantity, environment: commerceTestOffer.environment, offerState: commerceTestOffer.offerState }, { amountMinor: 4900, currency: "THB", quantity: 1, environment: "test", offerState: "test_only" });
@@ -30,6 +32,49 @@ test("commerce is server-only and absent from the local Data API", () => {
   assert.match(config, /\[storage\][\s\S]*?enabled = false/);
   assert.match(config, /\[realtime\][\s\S]*?enabled = false/);
   assert.equal(config.includes('"commerce"'), false);
+});
+
+test("Worker commerce configuration requires COMMERCE_DB and never falls back to a raw database URL", () => {
+  assert.throws(
+    () => resolveCommerceDatabaseRuntime({ env: {} }, "postgres://node-only.example/commerce"),
+    /COMMERCE_DB Hyperdrive binding is required/,
+  );
+
+  assert.deepEqual(
+    resolveCommerceDatabaseRuntime(
+      { env: { COMMERCE_DB: { connectionString: "postgres://hyperdrive.example/commerce" } } },
+      "postgres://node-only.example/commerce",
+    ),
+    { kind: "worker", connectionString: "postgres://hyperdrive.example/commerce" },
+  );
+});
+
+test("Node commerce configuration accepts COMMERCE_DATABASE_URL", () => {
+  assert.deepEqual(
+    resolveCommerceDatabaseRuntime(undefined, "postgres://node-only.example/commerce"),
+    { kind: "node", connectionString: "postgres://node-only.example/commerce" },
+  );
+});
+
+test("request-owned Worker clients are not retained and cleanup preserves operation errors", async () => {
+  let created = 0;
+  let ended = 0;
+  const createClient = () => {
+    created += 1;
+    return { end: async () => { ended += 1; } } as unknown as postgres.Sql;
+  };
+
+  await withRequestOwnedCommerceDatabase("postgres://hyperdrive.example/commerce", async () => "first", createClient);
+  await withRequestOwnedCommerceDatabase("postgres://hyperdrive.example/commerce", async () => "second", createClient);
+  assert.equal(created, 2);
+  assert.equal(ended, 2);
+
+  const operationError = new Error("transaction failed");
+  const cleanupFailureClient = { end: async () => { throw new Error("cleanup failed"); } } as unknown as postgres.Sql;
+  await assert.rejects(
+    withRequestOwnedCommerceDatabase("postgres://hyperdrive.example/commerce", async () => { throw operationError; }, () => cleanupFailureClient),
+    operationError,
+  );
 });
 
 test("migration declares immutable snapshots, role grants, RLS, and fixed test constraints", () => {

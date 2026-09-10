@@ -13,7 +13,7 @@
   },
   "hyperdrive": [
     {
-      "binding": "HYPERDRIVE",
+      "binding": "COMMERCE_DB",
       "id": "fce7a531bf6b4d74868cd5c34909eb82"
     }
   ],
