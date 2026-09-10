@@ -18,7 +18,19 @@ jobs:
       - run: npm run build
       - run: npm run validate:publication
       - run: npx supabase start
-      - run: npx supabase status --output env >> "$GITHUB_ENV"
+      - name: Export the local database URL for commerce integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          db_url_line="$(npx supabase status --output env | grep '^DB_URL=')"
+          case "$db_url_line" in
+            DB_URL=\"*\") db_url="${db_url_line#DB_URL=\"}"; db_url="${db_url%\"}" ;;
+            DB_URL=\'*\') db_url="${db_url_line#DB_URL=\'}"; db_url="${db_url%\'}" ;;
+            DB_URL=*) db_url="${db_url_line#DB_URL=}" ;;
+            *) echo "Supabase CLI did not provide DB_URL" >&2; exit 1 ;;
+          esac
+          test -n "$db_url"
+          printf 'COMMERCE_DATABASE_URL=%s\n' "$db_url" >> "$GITHUB_ENV"
       - run: npm run validate:commerce
       - if: always()
         run: npx supabase stop --no-backup
