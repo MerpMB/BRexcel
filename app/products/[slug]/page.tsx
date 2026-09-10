@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProductBySlug } from "@/content/products";
+import { Showcase } from "@/components/showcase/Showcase";
+import { freelancerCashflowShowcase } from "@/content/showcases/freelancer-cashflow";
 
 export default async function ProductPage({ params }: PageProps<"/products/[slug]">) {
   const { slug } = await params;
@@ -19,7 +21,7 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
         </div>
         <section className="detail-section" aria-labelledby="compatibility-title"><h2 id="compatibility-title">Compatibility</h2><ul className="detail-list">{product.compatibility.map((item) => <li key={item}>{item}</li>)}</ul></section>
         <section className="detail-section" aria-labelledby="license-title"><h2 id="license-title">Licensing status</h2><p>{product.licenseSummary}</p></section>
-        <section className="demo-placeholder" aria-labelledby="demo-title"><p className="eyebrow">Demo status</p><h2 id="demo-title">No interactive demo yet</h2><p>{product.demoDisclosure}</p></section>
+        <Showcase manifest={freelancerCashflowShowcase} />
       </article>
     </main>
   );

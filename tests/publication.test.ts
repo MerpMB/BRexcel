@@ -5,6 +5,7 @@ import { createPublicCatalog, validateCatalog } from "../lib/catalog/publication
 import { containsSecret, isWorkbookLike } from "../scripts/validate-publication";
 import { calculate, coerceInput, defaults, validateManifest } from "../lib/showcase/core";
 import { monthlySavingsShowcase } from "../content/showcases/monthly-savings";
+import { freelancerCashflowShowcase } from "../content/showcases/freelancer-cashflow";
 import { readFileSync } from "node:fs";
 
 const valid = () => ({ ...freelancerCashflowPlanner, benefits: [...freelancerCashflowPlanner.benefits], compatibility: [...freelancerCashflowPlanner.compatibility] });
@@ -18,3 +19,4 @@ test("secret guard rejects credentials but allows normal content", () => { asser
 test("showcase validates, calculates, constrains inputs, and resets", () => { assert.doesNotThrow(() => validateManifest(monthlySavingsShowcase)); assert.equal(calculate(monthlySavingsShowcase, { monthlyIncome: 50000, monthlyExpense: 30000 }).outputs.remaining, 20000); assert.equal(coerceInput(monthlySavingsShowcase.inputs[0], Infinity), null); assert.deepEqual(defaults(monthlySavingsShowcase), { monthlyIncome: 50000, monthlyExpense: 30000 }); });
 test("showcase rejects unknown calculators, blocks, and references", () => { assert.throws(() => validateManifest({ ...monthlySavingsShowcase, calculatorId: "unknown" })); assert.throws(() => validateManifest({ ...monthlySavingsShowcase, views: [{ ...monthlySavingsShowcase.views[0], blocks: [{ id: "bad", type: "input", inputId: "unknown" }] }] })); });
 test("showcase keeps public text escaped and chart data table-backed", () => { assert.doesNotThrow(() => validateManifest({ ...monthlySavingsShowcase, disclosure: "<script>not executed</script>" })); assert.equal(readFileSync("components/showcase/Showcase.tsx", "utf8").includes("dangerouslySetInnerHTML"), false); const result = calculate(monthlySavingsShowcase, defaults(monthlySavingsShowcase)); assert.deepEqual(result.tables.monthly, result.series.monthly); });
+test("freelancer scenario is deterministic, bounded, and table-parity safe", () => { const base = defaults(freelancerCashflowShowcase); const result = calculate(freelancerCashflowShowcase, base); assert.equal(result.outputs.remaining, 20000); assert.equal(result.outputs.commitments, 30000); assert.deepEqual(result.tables.monthly, result.series.monthly); assert.equal(coerceInput(freelancerCashflowShowcase.inputs[0], -1), null); assert.deepEqual(freelancerCashflowShowcase.scenarios?.[1].values.monthlyIncome, 40000); });
