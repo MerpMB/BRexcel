@@ -25,9 +25,9 @@ before purchase and download authorization. Authentication alone is insufficient
 | Product and architecture inception | Documented; implementation pending |
 | Storefront, product catalog, and product pages | Not yet implemented |
 | Interactive spreadsheet preview engine | Not yet implemented |
-| Payment processing, including Stripe Checkout and PromptPay | Not yet implemented |
+| Test-only Stripe-hosted Checkout initiation for the approved internal offer | Implemented; real-provider evidence requires a configured test account |
 | Private local Postgres persistence for an internal test commercial attempt | Implemented; no public commerce API |
-| Payment processing, public checkout, authentication, storage, and secure downloads | Not implemented |
+| Payment verification, entitlement fulfillment, live selling, PromptPay, authentication, storage, and secure downloads | Not implemented |
 
 ## Core principles
 
@@ -116,7 +116,12 @@ npm run lint
 npm run build
 npm run validate:publication
 npm run test:commerce
+npm run test:checkout
 ```
+
+`npm run test:checkout:stripe` is an explicit real-provider check. It requires
+`APP_ORIGIN` and a server-only `STRIPE_TEST_SECRET_KEY`; it fails closed when
+either is absent and never uses live-mode keys.
 
 ## Contributing
 

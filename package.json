@@ -9,6 +9,8 @@
     "lint": "eslint",
     "validate:publication": "tsc -p tsconfig.validation.json && node --test .validation-build/tests/publication.test.js && node .validation-build/scripts/validate-publication.js",
     "test:commerce": "tsc -p tsconfig.commerce.json && node --test .commerce-build/tests/commerce.test.js",
+    "test:checkout": "tsc -p tsconfig.commerce.json && node --test .commerce-build/tests/checkout.test.js",
+    "test:checkout:stripe": "tsc -p tsconfig.commerce.json && node .commerce-build/scripts/test-checkout-stripe.js",
     "test:commerce:integration": "tsc -p tsconfig.commerce.json && node .commerce-build/scripts/test-commerce-integration.js",
     "validate:commerce": "npm run test:commerce && npm run test:commerce:integration"
   },
@@ -17,7 +19,8 @@
     "postgres": "3.4.9",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "server-only": "0.0.1"
+    "server-only": "0.0.1",
+    "stripe": "22.6.2"
   },
   "devDependencies": {
     "@types/node": "^20",

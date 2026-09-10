@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import postgres from "postgres";
 import { createGuestPurchaseCapability } from "../lib/commerce/contract";
-import { persistTrustedCommerceAttemptInTransaction } from "../lib/commerce/persistence-core";
+import { bindProviderSessionReferenceInTransaction, persistTrustedCommerceAttemptInTransaction } from "../lib/commerce/persistence-core";
 
 function connectionString() {
   const value = process.env.COMMERCE_DATABASE_URL ?? process.env.DB_URL;
@@ -18,6 +18,13 @@ function persistAsCommerceRuntime(sql: postgres.Sql, request: Parameters<typeof 
   return sql.begin(async (transaction) => {
     await transaction`set local role commerce_runtime`;
     return persistTrustedCommerceAttemptInTransaction(transaction, request);
+  });
+}
+
+function bindAsCommerceRuntime(sql: postgres.Sql, attemptId: string, providerSessionReference: string) {
+  return sql.begin(async (transaction) => {
+    await transaction`set local role commerce_runtime`;
+    return bindProviderSessionReferenceInTransaction(transaction, attemptId, providerSessionReference);
   });
 }
 
@@ -45,6 +52,19 @@ async function main() {
     await expectReject(() => persistAsCommerceRuntime(sql, { creationIdentity: collisionIdentity, idempotencyKey: randomUUID(), providerSessionReference: duplicatedReference }), "provider references must be unique");
     const [collisionRollback] = await sql<{ count: string }[]>`select count(*)::text as count from commerce.orders where creation_identity = ${collisionIdentity}::uuid`;
     assert.equal(collisionRollback.count, "0", "a failed provider attempt rolls back its new order");
+
+    const bindable = await persistAsCommerceRuntime(sql, { creationIdentity: randomUUID(), idempotencyKey: randomUUID() });
+    const boundReference = "cs_test_" + randomUUID().replaceAll("-", "");
+    assert.deepEqual(await bindAsCommerceRuntime(sql, bindable.attemptId, boundReference), { providerSessionReference: boundReference, reused: false });
+    assert.deepEqual(await bindAsCommerceRuntime(sql, bindable.attemptId, boundReference), { providerSessionReference: boundReference, reused: true });
+    await expectReject(() => bindAsCommerceRuntime(sql, bindable.attemptId, "cs_test_" + randomUUID().replaceAll("-", "")), "provider sessions cannot be rebound");
+
+    const concurrentlyBindable = await persistAsCommerceRuntime(sql, { creationIdentity: randomUUID(), idempotencyKey: randomUUID() });
+    const concurrentBindings = await Promise.allSettled([
+      bindAsCommerceRuntime(sql, concurrentlyBindable.attemptId, "cs_test_" + randomUUID().replaceAll("-", "")),
+      bindAsCommerceRuntime(sql, concurrentlyBindable.attemptId, "cs_test_" + randomUUID().replaceAll("-", "")),
+    ]);
+    assert.equal(concurrentBindings.filter((result) => result.status === "fulfilled").length, 1, "exactly one concurrent provider binding wins");
 
     const concurrentIdentity = randomUUID();
     const parallel = await Promise.all([

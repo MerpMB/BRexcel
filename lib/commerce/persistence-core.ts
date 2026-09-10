@@ -2,7 +2,7 @@ import type postgres from "postgres";
 import { commerceTestOffer, hashGuestPurchaseCapability, type CreateCommerceAttemptRequest, type PersistedCommerceAttempt, validateCommerceAttemptRequest } from "./contract";
 
 type OrderRow = { id: string };
-type AttemptRow = { id: string; order_id: string };
+type AttemptRow = { id: string; order_id: string; provider_session_reference: string | null };
 type EntitlementRow = { id: string };
 
 /**
@@ -43,10 +43,10 @@ export async function persistTrustedCommerceAttemptInTransaction(transaction: po
         ${request.providerSessionReference ?? null}, 'created'
       )
       on conflict (provider, environment, idempotency_key) do nothing
-      returning id, order_id
+      returning id, order_id, provider_session_reference
   `;
   const attempt = insertedAttempt[0] ?? (await transaction<AttemptRow[]>`
-      select id, order_id from commerce.payment_attempts
+      select id, order_id, provider_session_reference from commerce.payment_attempts
       where provider = 'stripe' and environment = ${commerceTestOffer.environment}
         and idempotency_key = ${request.idempotencyKey}::uuid
       for update
@@ -65,5 +65,22 @@ export async function persistTrustedCommerceAttemptInTransaction(transaction: po
     entitlementId = entitlement[0]?.id;
   }
 
-  return { orderId: order.id, attemptId: attempt.id, entitlementId, reused: insertedAttempt.length === 0 };
+  return { orderId: order.id, attemptId: attempt.id, providerSessionReference: attempt.provider_session_reference ?? undefined, entitlementId, reused: insertedAttempt.length === 0 };
+}
+
+export async function bindProviderSessionReferenceInTransaction(transaction: postgres.TransactionSql, attemptId: string, providerSessionReference: string) {
+  if (!/^cs_test_[A-Za-z0-9_-]{8,}$/i.test(providerSessionReference)) throw new Error("provider session reference must be a Stripe test session");
+  const attempt = (await transaction<AttemptRow[]>`
+    select id, order_id, provider_session_reference from commerce.payment_attempts where id = ${attemptId}::uuid for update
+  `)[0];
+  if (!attempt) throw new Error("Payment attempt not found");
+  if (attempt.provider_session_reference === providerSessionReference) return { providerSessionReference, reused: true };
+  if (attempt.provider_session_reference !== null) throw new Error("Payment attempt is already bound to another provider session");
+  const bound = (await transaction<AttemptRow[]>`
+    update commerce.payment_attempts set provider_session_reference = ${providerSessionReference}
+    where id = ${attemptId}::uuid and provider_session_reference is null
+    returning id, order_id, provider_session_reference
+  `)[0];
+  if (!bound) throw new Error("Provider session binding was not applied");
+  return { providerSessionReference: bound.provider_session_reference!, reused: false };
 }

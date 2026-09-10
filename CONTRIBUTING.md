@@ -22,6 +22,10 @@ When Docker Desktop is available, run `npm run test:commerce:integration` agains
 the disposable local Supabase database. Do not add public routes, browser imports,
 or credentials to exercise commerce persistence.
 
+For checkout work, run `npm run test:checkout`. The optional real provider
+command, `npm run test:checkout:stripe`, requires an externally configured
+Stripe test secret and must never be run with a live key.
+
 ## Code and documentation
 
 Use the repository's `.editorconfig` conventions. Write clear commit messages,

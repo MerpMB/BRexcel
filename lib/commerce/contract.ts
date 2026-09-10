@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 
 export const commerceTestOffer = {
   offerId: "offer_test_freelancer_cashflow_v1",
@@ -22,6 +22,7 @@ export type CreateCommerceAttemptRequest = {
 export type PersistedCommerceAttempt = {
   orderId: string;
   attemptId: string;
+  providerSessionReference?: string;
   entitlementId?: string;
   reused: boolean;
 };
@@ -34,12 +35,26 @@ export function requireUuid(value: string, label: string) {
 }
 
 export function createGuestPurchaseCapability() {
-  return randomUUID() + randomUUID();
+  return randomBytes(32).toString("base64url");
 }
 
 export function hashGuestPurchaseCapability(capability: string) {
-  if (capability.length < 32) throw new Error("guest capability must be sufficiently random");
+  if (!isGuestPurchaseCapability(capability)) throw new Error("guest capability must be exactly 32 random bytes");
   return createHash("sha256").update(capability).digest();
+}
+
+export function isGuestPurchaseCapability(capability: string) {
+  if (!/^[A-Za-z0-9_-]{43}$/.test(capability)) return false;
+  return Buffer.from(capability, "base64url").length === 32;
+}
+
+export function deriveStableCommerceIdentity(capability: string, domain: "BRexcel/order/v1" | "BRexcel/attempt/v1") {
+  if (!isGuestPurchaseCapability(capability)) throw new Error("guest capability must be exactly 32 random bytes");
+  const bytes = createHash("sha256").update(domain).update("\0").update(capability).digest().subarray(0, 16);
+  bytes[6] = (bytes[6] & 0x0f) | 0x50;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = bytes.toString("hex");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
 export function validateCommerceAttemptRequest(request: CreateCommerceAttemptRequest) {
