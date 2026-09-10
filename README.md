@@ -13,8 +13,8 @@ designed with Thai customers in mind, including a future path for QR / PromptPay
 payments, while retaining room for international payments.
 
 The key product boundary is simple: an interactive preview may demonstrate a
-workbook's behavior, but the original paid workbook must never be exposed to
-an unauthenticated visitor.
+workbook's behavior, but the original paid workbook must never reach a browser
+before purchase and download authorization. Authentication alone is insufficient.
 
 ## Status
 
@@ -22,7 +22,7 @@ an unauthenticated visitor.
 | --- | --- |
 | Next.js, TypeScript, App Router, and ESLint foundation | Implemented |
 | Public repository guidance and Apache-2.0 source licensing | Implemented |
-| Product and architecture inception | Planned |
+| Product and architecture inception | Documented; implementation pending |
 | Storefront, product catalog, and product pages | Not yet implemented |
 | Interactive spreadsheet preview engine | Not yet implemented |
 | Payment processing, including Stripe Checkout and PromptPay | Not yet implemented |
@@ -32,13 +32,26 @@ an unauthenticated visitor.
 
 - Keep the first solution lightweight before generalizing it.
 - Maintain explicit product and security boundaries.
-- Never deliver an original paid workbook to an unauthenticated browser.
+- Never deliver an original paid workbook before purchase and download authorization.
 - Treat payment state as server-authoritative when payments are introduced.
 - Keep future entitlement state distinct from payment state.
 - Keep commercial assets separate from open-source source code.
 - Grow architecture from demonstrated product needs.
 - Avoid defaulting to a marketplace, CMS, universal Excel runtime, or Shopify clone.
 - Prefer boring, understandable technology over speculative abstraction.
+
+## Planning entry points
+
+- [Product scope and release criteria](docs/product.md)
+- [Architecture and dependency gates](docs/architecture.md)
+- [Threat model](docs/threat-model.md)
+- [Milestones, atomic backlog and lead escalation](docs/delivery.md)
+- Contracts: [product](docs/contracts/product.md), [showcase](docs/contracts/showcase.md),
+  [checkout](docs/contracts/checkout.md), [entitlement](docs/contracts/entitlement.md)
+- Decisions: [application](docs/decisions/0001-application-shape.md),
+  [commercial assets](docs/decisions/0002-commercial-asset-boundary.md),
+  [showcase](docs/decisions/0003-spreadsheet-showcase-strategy.md),
+  [commerce and identity](docs/decisions/0004-commerce-and-entitlement-boundary.md)
 
 ## Technology direction
 

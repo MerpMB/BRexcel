@@ -15,5 +15,6 @@ practical.
 BRexcel is currently a foundation-stage application. Payment processing,
 authentication, storage, entitlement checks, and digital delivery have not
 been implemented. Future work must preserve the security principles documented
-in the README, especially the rule that original paid workbooks never reach an
-unauthenticated browser.
+in the [threat model](docs/threat-model.md), especially the rule that original
+paid workbooks never reach a browser before purchase and download authorization.
+Authentication alone does not authorize access.
