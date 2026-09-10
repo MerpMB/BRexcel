@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/.validation-build
 /.pnp
 .pnp.*
 .yarn/*

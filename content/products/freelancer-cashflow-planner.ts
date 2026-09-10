@@ -11,6 +11,9 @@ export const freelancerCashflowPlanner = {
   demoReference: "interactive-demo-not-yet-implemented",
   publicationState: "synthetic-fixture",
   saleAvailability: "not-available",
+  synthetic: true,
+  saleEnabled: false,
+  internalSource: "repository fixture only",
   fixtureDisclosure: "Synthetic product fixture — not a real BRexcel commercial offering.",
   demoDisclosure: "Interactive demo coming in a later development slice.",
 } as const;

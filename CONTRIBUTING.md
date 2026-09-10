@@ -10,7 +10,12 @@ future implementation are especially valuable.
 - Keep changes focused and avoid adding speculative dependencies or abstractions.
 - Do not commit credentials, customer data, payment details, or commercial
   spreadsheet files.
+- Use synthetic fixtures only; original workbooks never belong in this repository.
 - Run the relevant checks documented in `package.json` before submitting.
+
+Run `npm run validate:publication` before changing public product metadata. It
+rejects invalid catalog entries, obvious secrets, and workbook-like assets.
+Resolve the reported source issue rather than bypassing the check.
 
 ## Code and documentation
 

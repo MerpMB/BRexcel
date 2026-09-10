@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "validate:publication": "tsc -p tsconfig.validation.json && node --test .validation-build/tests/publication.test.js && node .validation-build/scripts/validate-publication.js"
   },
   "dependencies": {
     "next": "16.3.4",

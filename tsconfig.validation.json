@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "noEmit": false, "outDir": ".validation-build", "rootDir": ".", "module": "commonjs", "moduleResolution": "node", "verbatimModuleSyntax": false },
+  "include": ["content/products/**/*.ts", "lib/catalog/**/*.ts", "scripts/**/*.ts", "tests/**/*.ts"]
+}
