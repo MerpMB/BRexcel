@@ -4,16 +4,17 @@ export type CommerceDatabaseRuntime =
   | { kind: "worker"; connectionString: string }
   | { kind: "node"; connectionString: string };
 
-export type WorkerRequestContext = { env: Record<string, unknown> };
+export type WorkerRequestContext = { env: object };
 type CommerceDatabaseOperation<Result> = (database: postgres.Sql) => Promise<Result>;
 type CommerceDatabaseFactory = (connectionString: string) => postgres.Sql;
 
 export function resolveCommerceDatabaseRuntime(
-  workerContext: WorkerRequestContext | undefined,
+  platform: string | undefined,
   nodeConnectionString: string | undefined,
+  getWorkerContext: () => WorkerRequestContext,
 ): CommerceDatabaseRuntime {
-  if (workerContext) {
-    const binding = workerContext.env.COMMERCE_DB;
+  if (platform === "worker") {
+    const binding = Reflect.get(getWorkerContext().env, "COMMERCE_DB");
     if (!isHyperdriveBinding(binding)) {
       throw new Error("COMMERCE_DB Hyperdrive binding is required for Worker commerce persistence");
     }
@@ -21,8 +22,12 @@ export function resolveCommerceDatabaseRuntime(
     return { kind: "worker", connectionString: binding.connectionString };
   }
 
-  if (!nodeConnectionString) throw new Error("COMMERCE_DATABASE_URL is required for Node commerce persistence");
-  return { kind: "node", connectionString: nodeConnectionString };
+  if (platform === "node") {
+    if (!nodeConnectionString) throw new Error("COMMERCE_DATABASE_URL is required for Node commerce persistence");
+    return { kind: "node", connectionString: nodeConnectionString };
+  }
+
+  throw new Error("COMMERCE_PLATFORM must be exactly 'node' or 'worker'");
 }
 
 /**
@@ -53,5 +58,5 @@ export async function withRequestOwnedCommerceDatabase<Result>(
 }
 
 function isHyperdriveBinding(value: unknown): value is { connectionString: string } {
-  return typeof value === "object" && value !== null && "connectionString" in value && typeof value.connectionString === "string";
+  return typeof value === "object" && value !== null && "connectionString" in value && typeof value.connectionString === "string" && value.connectionString.trim().length > 0;
 }

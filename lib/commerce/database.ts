@@ -2,9 +2,7 @@ import "server-only";
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import postgres from "postgres";
-import { resolveCommerceDatabaseRuntime, withRequestOwnedCommerceDatabase, type WorkerRequestContext } from "./database-runtime";
-
-const cloudflareRequestContextSymbol = Symbol.for("__cloudflare-context__");
+import { resolveCommerceDatabaseRuntime, withRequestOwnedCommerceDatabase } from "./database-runtime";
 
 type CommerceDatabaseOperation<Result> = (database: postgres.Sql) => Promise<Result>;
 
@@ -15,19 +13,14 @@ let nodeClient: postgres.Sql | undefined;
  * Worker clients are intentionally request-owned; Node/local clients retain the existing singleton.
  */
 export function withCommerceDatabase<Result>(operation: CommerceDatabaseOperation<Result>) {
-  const runtime = resolveCommerceDatabaseRuntime(getActiveWorkerRequestContext(), process.env.COMMERCE_DATABASE_URL);
+  const runtime = resolveCommerceDatabaseRuntime(
+    process.env.COMMERCE_PLATFORM,
+    process.env.COMMERCE_DATABASE_URL,
+    () => getCloudflareContext(),
+  );
   return runtime.kind === "worker"
     ? withRequestOwnedCommerceDatabase(runtime.connectionString, operation, createWorkerCommerceDatabase)
     : operation(getNodeCommerceDatabase(runtime.connectionString));
-}
-
-/**
- * A defined OpenNext context symbol identifies the Worker entrypoint. Its value is
- * request-scoped by the adapter's AsyncLocalStorage; access it through the public API.
- */
-function getActiveWorkerRequestContext(): WorkerRequestContext | undefined {
-  if (!Object.prototype.hasOwnProperty.call(globalThis, cloudflareRequestContextSymbol)) return undefined;
-  return { env: getCloudflareContext().env as unknown as Record<string, unknown> };
 }
 
 function getNodeCommerceDatabase(connectionString: string) {

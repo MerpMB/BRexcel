@@ -7,6 +7,8 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    env:
+      COMMERCE_PLATFORM: node
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

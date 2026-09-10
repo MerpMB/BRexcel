@@ -34,25 +34,61 @@ test("commerce is server-only and absent from the local Data API", () => {
   assert.equal(config.includes('"commerce"'), false);
 });
 
-test("Worker commerce configuration requires COMMERCE_DB and never falls back to a raw database URL", () => {
+const nodeConnectionString = "postgres://node-only.example/commerce";
+const workerConnectionString = "postgres://hyperdrive.example/commerce";
+const workerContext = () => ({ env: { COMMERCE_DB: { connectionString: workerConnectionString } } });
+
+test("COMMERCE_PLATFORM selects the Worker path and never falls back to a raw database URL", () => {
   assert.throws(
-    () => resolveCommerceDatabaseRuntime({ env: {} }, "postgres://node-only.example/commerce"),
+    () => resolveCommerceDatabaseRuntime("worker", nodeConnectionString, () => ({ env: {} })),
     /COMMERCE_DB Hyperdrive binding is required/,
   );
 
   assert.deepEqual(
     resolveCommerceDatabaseRuntime(
-      { env: { COMMERCE_DB: { connectionString: "postgres://hyperdrive.example/commerce" } } },
-      "postgres://node-only.example/commerce",
+      "worker",
+      nodeConnectionString,
+      workerContext,
     ),
-    { kind: "worker", connectionString: "postgres://hyperdrive.example/commerce" },
+    { kind: "worker", connectionString: workerConnectionString },
   );
 });
 
-test("Node commerce configuration accepts COMMERCE_DATABASE_URL", () => {
+test("COMMERCE_PLATFORM=node accepts COMMERCE_DATABASE_URL", () => {
   assert.deepEqual(
-    resolveCommerceDatabaseRuntime(undefined, "postgres://node-only.example/commerce"),
-    { kind: "node", connectionString: "postgres://node-only.example/commerce" },
+    resolveCommerceDatabaseRuntime("node", nodeConnectionString, () => { throw new Error("Worker context must not be read for Node"); }),
+    { kind: "node", connectionString: nodeConnectionString },
+  );
+});
+
+test("missing, empty, and unknown COMMERCE_PLATFORM values fail before creating a client", () => {
+  for (const platform of [undefined, "", "local", " worker"]) {
+    assert.throws(
+      () => resolveCommerceDatabaseRuntime(platform, nodeConnectionString, workerContext),
+      /COMMERCE_PLATFORM must be exactly 'node' or 'worker'/,
+    );
+  }
+});
+
+test("Worker context errors propagate and malformed Hyperdrive bindings fail closed", () => {
+  const contextError = new Error("missing active Cloudflare context");
+  assert.throws(
+    () => resolveCommerceDatabaseRuntime("worker", nodeConnectionString, () => { throw contextError; }),
+    contextError,
+  );
+
+  for (const binding of [undefined, null, {}, { connectionString: "" }, { connectionString: "   " }, { connectionString: 123 }]) {
+    assert.throws(
+      () => resolveCommerceDatabaseRuntime("worker", nodeConnectionString, () => ({ env: { COMMERCE_DB: binding } })),
+      /COMMERCE_DB Hyperdrive binding is required/,
+    );
+  }
+});
+
+test("Node execution still requires COMMERCE_DATABASE_URL", () => {
+  assert.throws(
+    () => resolveCommerceDatabaseRuntime("node", undefined, workerContext),
+    /COMMERCE_DATABASE_URL is required/,
   );
 });
 
