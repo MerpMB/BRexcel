@@ -3,6 +3,8 @@ import test from "node:test";
 import { freelancerCashflowPlanner } from "../content/products/freelancer-cashflow-planner";
 import { createPublicCatalog, validateCatalog } from "../lib/catalog/publication";
 import { containsSecret, isWorkbookLike } from "../scripts/validate-publication";
+import { calculate, coerceInput, defaults, validateManifest } from "../lib/showcase/core";
+import { monthlySavingsShowcase } from "../content/showcases/monthly-savings";
 
 const valid = () => ({ ...freelancerCashflowPlanner, benefits: [...freelancerCashflowPlanner.benefits], compatibility: [...freelancerCashflowPlanner.compatibility] });
 test("valid synthetic catalog passes", () => assert.doesNotThrow(() => validateCatalog([valid()])));
@@ -12,3 +14,5 @@ test("synthetic sale-enabled products fail", () => assert.throws(() => validateC
 test("public projection excludes internal fields", () => { const product = createPublicCatalog([valid()])[0]; assert.equal("internalSource" in product, false); assert.equal("saleEnabled" in product, false); });
 test("workbook guard detects extensions and renamed synthetic ZIP signature", () => { assert.equal(isWorkbookLike("asset.xlsx", Buffer.from("text")), true); assert.equal(isWorkbookLike("fixture.bin", Buffer.from("PK fake [Content_Types].xml xl/workbook.xml")), true); assert.equal(isWorkbookLike("notes.zip", Buffer.from("PK harmless archive")), false); });
 test("secret guard rejects credentials but allows normal content", () => { assert.equal(containsSecret("STRIPE" + "_SECRET_KEY=" + "sk_test_" + "123"), true); assert.equal(containsSecret("Synthetic fixture documentation"), false); });
+test("showcase validates, calculates, constrains inputs, and resets", () => { assert.doesNotThrow(() => validateManifest(monthlySavingsShowcase)); assert.equal(calculate(monthlySavingsShowcase, { monthlyIncome: 50000, monthlyExpense: 30000 }).outputs.remaining, 20000); assert.equal(coerceInput(monthlySavingsShowcase.inputs[0], Infinity), null); assert.deepEqual(defaults(monthlySavingsShowcase), { monthlyIncome: 50000, monthlyExpense: 30000 }); });
+test("showcase rejects unknown calculators, blocks, and references", () => { assert.throws(() => validateManifest({ ...monthlySavingsShowcase, calculatorId: "unknown" })); assert.throws(() => validateManifest({ ...monthlySavingsShowcase, views: [{ ...monthlySavingsShowcase.views[0], blocks: [{ id: "bad", type: "input", inputId: "unknown" }] }] })); });
