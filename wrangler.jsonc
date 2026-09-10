@@ -18,7 +18,11 @@
     }
   ],
   "vars": {
-    "COMMERCE_PLATFORM": "worker"
+    "COMMERCE_PLATFORM": "worker",
+    "APP_ORIGIN": "https://brexcel-staging.phpm095.workers.dev"
+  },
+  "secrets": {
+    "required": ["STRIPE_TEST_SECRET_KEY"]
   },
   "observability": {
     "enabled": true
