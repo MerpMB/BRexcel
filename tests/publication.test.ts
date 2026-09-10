@@ -5,6 +5,7 @@ import { createPublicCatalog, validateCatalog } from "../lib/catalog/publication
 import { containsSecret, isWorkbookLike } from "../scripts/validate-publication";
 import { calculate, coerceInput, defaults, validateManifest } from "../lib/showcase/core";
 import { monthlySavingsShowcase } from "../content/showcases/monthly-savings";
+import { readFileSync } from "node:fs";
 
 const valid = () => ({ ...freelancerCashflowPlanner, benefits: [...freelancerCashflowPlanner.benefits], compatibility: [...freelancerCashflowPlanner.compatibility] });
 test("valid synthetic catalog passes", () => assert.doesNotThrow(() => validateCatalog([valid()])));
@@ -16,3 +17,4 @@ test("workbook guard detects extensions and renamed synthetic ZIP signature", ()
 test("secret guard rejects credentials but allows normal content", () => { assert.equal(containsSecret("STRIPE" + "_SECRET_KEY=" + "sk_test_" + "123"), true); assert.equal(containsSecret("Synthetic fixture documentation"), false); });
 test("showcase validates, calculates, constrains inputs, and resets", () => { assert.doesNotThrow(() => validateManifest(monthlySavingsShowcase)); assert.equal(calculate(monthlySavingsShowcase, { monthlyIncome: 50000, monthlyExpense: 30000 }).outputs.remaining, 20000); assert.equal(coerceInput(monthlySavingsShowcase.inputs[0], Infinity), null); assert.deepEqual(defaults(monthlySavingsShowcase), { monthlyIncome: 50000, monthlyExpense: 30000 }); });
 test("showcase rejects unknown calculators, blocks, and references", () => { assert.throws(() => validateManifest({ ...monthlySavingsShowcase, calculatorId: "unknown" })); assert.throws(() => validateManifest({ ...monthlySavingsShowcase, views: [{ ...monthlySavingsShowcase.views[0], blocks: [{ id: "bad", type: "input", inputId: "unknown" }] }] })); });
+test("showcase keeps public text escaped and chart data table-backed", () => { assert.doesNotThrow(() => validateManifest({ ...monthlySavingsShowcase, disclosure: "<script>not executed</script>" })); assert.equal(readFileSync("components/showcase/Showcase.tsx", "utf8").includes("dangerouslySetInnerHTML"), false); const result = calculate(monthlySavingsShowcase, defaults(monthlySavingsShowcase)); assert.deepEqual(result.tables.monthly, result.series.monthly); });
