@@ -14,6 +14,11 @@ $$;
 
 grant usage on schema commerce to commerce_runtime;
 
+-- Local Supabase migrations run as postgres. Membership lets the disposable CI
+-- administrator exercise the restricted runtime role without changing that
+-- role's privileges; production application logins must be granted separately.
+grant commerce_runtime to postgres;
+
 create table commerce.orders (
   id uuid primary key default gen_random_uuid(),
   creation_identity uuid not null unique,
