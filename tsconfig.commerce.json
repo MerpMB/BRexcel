@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": ".commerce-build",
+    "rootDir": ".",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "verbatimModuleSyntax": false
+  },
+  "include": ["lib/commerce/**/*.ts", "scripts/test-commerce-integration.ts", "tests/commerce.test.ts"]
+}

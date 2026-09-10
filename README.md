@@ -26,7 +26,8 @@ before purchase and download authorization. Authentication alone is insufficient
 | Storefront, product catalog, and product pages | Not yet implemented |
 | Interactive spreadsheet preview engine | Not yet implemented |
 | Payment processing, including Stripe Checkout and PromptPay | Not yet implemented |
-| Supabase/Postgres, private storage, authentication, entitlements, and secure downloads | Not yet implemented |
+| Private local Postgres persistence for an internal test commercial attempt | Implemented; no public commerce API |
+| Payment processing, public checkout, authentication, storage, and secure downloads | Not implemented |
 
 ## Core principles
 
@@ -60,6 +61,29 @@ private Supabase Storage, Stripe Checkout / PromptPay, and GitHub Actions
 considered in future phases. These are directional choices only; none of those
 integrations are present in this repository today.
 
+## Local commerce persistence
+
+T05 adds only a private, server-only Postgres persistence seam for a fixed
+internal test offer. It does not create checkout, payment-provider, public API,
+Auth, Storage, Realtime, or download functionality. The `commerce` schema is
+not exposed through the local Supabase Data API; its tables use a restricted
+runtime role, RLS, database constraints, and immutable order snapshots.
+
+For the Docker-backed local verification, start Docker Desktop and run:
+
+```bash
+npx supabase start
+npx supabase status --output env
+npm run validate:commerce
+npx supabase stop --no-backup
+```
+
+The integration command requires `COMMERCE_DATABASE_URL` or the CLI-provided
+`DB_URL`; it fails when neither is available. Keep both assignments in
+`.env.example` empty and never commit a connection URL with credentials.
+The connection identity must be a non-superuser login permitted to assume the
+restricted `commerce_runtime` role.
+
 ## Commercial workbook boundary
 
 This public repository contains no commercial workbook or template assets.
@@ -90,6 +114,8 @@ For a production verification build:
 ```bash
 npm run lint
 npm run build
+npm run validate:publication
+npm run test:commerce
 ```
 
 ## Contributing

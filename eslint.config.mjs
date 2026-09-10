@@ -12,6 +12,7 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     ".validation-build/**",
+    ".commerce-build/**",
     "next-env.d.ts",
   ]),
 ]);

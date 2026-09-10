@@ -17,3 +17,8 @@ jobs:
       - run: npm run lint
       - run: npm run build
       - run: npm run validate:publication
+      - run: npx supabase start
+      - run: npx supabase status --output env >> "$GITHUB_ENV"
+      - run: npm run validate:commerce
+      - if: always()
+        run: npx supabase stop --no-backup

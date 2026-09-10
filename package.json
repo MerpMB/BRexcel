@@ -7,12 +7,17 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "validate:publication": "tsc -p tsconfig.validation.json && node --test .validation-build/tests/publication.test.js && node .validation-build/scripts/validate-publication.js"
+    "validate:publication": "tsc -p tsconfig.validation.json && node --test .validation-build/tests/publication.test.js && node .validation-build/scripts/validate-publication.js",
+    "test:commerce": "tsc -p tsconfig.commerce.json && node --test .commerce-build/tests/commerce.test.js",
+    "test:commerce:integration": "tsc -p tsconfig.commerce.json && node .commerce-build/scripts/test-commerce-integration.js",
+    "validate:commerce": "npm run test:commerce && npm run test:commerce:integration"
   },
   "dependencies": {
     "next": "16.3.4",
+    "postgres": "3.4.9",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "server-only": "0.0.1"
   },
   "devDependencies": {
     "@types/node": "^20",
@@ -20,6 +25,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
+    "supabase": "2.117.0",
     "typescript": "^5"
   }
 }

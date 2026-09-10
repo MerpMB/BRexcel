@@ -17,6 +17,11 @@ Run `npm run validate:publication` before changing public product metadata. It
 rejects invalid catalog entries, obvious secrets, and workbook-like assets.
 Resolve the reported source issue rather than bypassing the check.
 
+For changes under `lib/commerce` or `supabase/`, also run `npm run test:commerce`.
+When Docker Desktop is available, run `npm run test:commerce:integration` against
+the disposable local Supabase database. Do not add public routes, browser imports,
+or credentials to exercise commerce persistence.
+
 ## Code and documentation
 
 Use the repository's `.editorconfig` conventions. Write clear commit messages,
