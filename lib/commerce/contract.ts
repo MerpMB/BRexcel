@@ -9,13 +9,13 @@ export const commerceTestOffer = {
   quantity: 1,
   environment: "test",
   offerState: "test_only",
+  versionId: "freelancer-cashflow-v1",
 } as const;
 
 export type CreateCommerceAttemptRequest = {
   creationIdentity: string;
   idempotencyKey: string;
   providerSessionReference?: string;
-  grantEntitlement?: boolean;
   guestCapability?: string;
 };
 
@@ -23,7 +23,6 @@ export type PersistedCommerceAttempt = {
   orderId: string;
   attemptId: string;
   providerSessionReference?: string;
-  entitlementId?: string;
   reused: boolean;
 };
 
