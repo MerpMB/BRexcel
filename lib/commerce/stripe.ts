@@ -1,7 +1,7 @@
 import "server-only";
 
-import Stripe from "stripe";
 import { createHostedCheckoutSessionWithClient } from "./stripe-core";
+import { createStripeTestClient } from "./stripe-client";
 
 function applicationOrigin() {
   const value = process.env.APP_ORIGIN;
@@ -12,11 +12,7 @@ function applicationOrigin() {
 }
 
 export function getStripeClient() {
-  const secret = process.env.STRIPE_TEST_SECRET_KEY;
-  if (!secret) throw new Error("STRIPE_TEST_SECRET_KEY is required for Stripe checkout");
-  if (secret.startsWith("sk_live_")) throw new Error("Live Stripe keys are not permitted in T06");
-  if (!secret.startsWith("sk_test_")) throw new Error("T06 requires a Stripe test secret key");
-  return new Stripe(secret);
+  return createStripeTestClient();
 }
 
 export async function createHostedCheckoutSession(orderId: string, attemptId: string) {
