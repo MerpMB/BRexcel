@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createGuestPurchaseCapability, isGuestPurchaseCapability } from "@/lib/commerce/contract";
+import { checkoutSecurityHeaders, prepareGuestCheckoutCapability } from "@/lib/commerce/checkout-capability";
 import { guestCheckoutCookieName, guestCheckoutCookieOptions } from "@/lib/commerce/checkout-contract";
 
 export async function GET(request: NextRequest) {
   const response = NextResponse.redirect(new URL("/checkout", request.url), 303);
-  const capability = request.cookies.get(guestCheckoutCookieName)?.value;
-  if (!capability || !isGuestPurchaseCapability(capability)) response.cookies.set(guestCheckoutCookieName, createGuestPurchaseCapability(), guestCheckoutCookieOptions);
-  response.headers.set("Cache-Control", "no-store");
-  response.headers.set("Referrer-Policy", "no-referrer");
+  const prepared = prepareGuestCheckoutCapability(request.cookies.get(guestCheckoutCookieName)?.value);
+  if (prepared.shouldSetCookie) response.cookies.set(guestCheckoutCookieName, prepared.capability, guestCheckoutCookieOptions);
+  for (const [name, value] of Object.entries(checkoutSecurityHeaders)) response.headers.set(name, value);
   return response;
 }
