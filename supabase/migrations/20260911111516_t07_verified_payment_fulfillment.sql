@@ -77,7 +77,11 @@ create table commerce.provider_events (
     'observed_expired', 'attention'
   )),
   processed_at timestamptz not null default now(),
-  anomaly_code text,
+  anomaly_code text check (anomaly_code is null or anomaly_code in (
+    'unknown_session', 'metadata_mismatch', 'amount_mismatch', 'currency_mismatch',
+    'item_mismatch', 'environment_mismatch', 'account_mismatch',
+    'payment_status_mismatch', 'second_paid_attempt', 'conflicting_entitlement_source'
+  )),
   unique (provider, environment, provider_event_id)
 );
 
