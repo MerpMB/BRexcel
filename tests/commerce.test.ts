@@ -4,6 +4,7 @@ import test from "node:test";
 import { commerceTestOffer, createGuestPurchaseCapability, hashGuestPurchaseCapability, validateCommerceAttemptRequest } from "../lib/commerce/contract";
 import type postgres from "postgres";
 import { resolveCommerceDatabaseRuntime, withRequestOwnedCommerceDatabase } from "../lib/commerce/database-runtime";
+import { createStripeTestClient } from "../lib/commerce/stripe-client";
 
 test("internal commerce fixture is fixed to one test-only THB offer", () => {
   assert.deepEqual({ amountMinor: commerceTestOffer.amountMinor, currency: commerceTestOffer.currency, quantity: commerceTestOffer.quantity, environment: commerceTestOffer.environment, offerState: commerceTestOffer.offerState }, { amountMinor: 4900, currency: "THB", quantity: 1, environment: "test", offerState: "test_only" });
@@ -111,6 +112,17 @@ test("request-owned Worker clients are not retained and cleanup preserves operat
     withRequestOwnedCommerceDatabase("postgres://hyperdrive.example/commerce", async () => { throw operationError; }, () => cleanupFailureClient),
     operationError,
   );
+});
+
+test("Stripe checkout always uses the fetch HTTP client", () => {
+  const stripe = createStripeTestClient("sk_test_transport_1234567890");
+  assert.equal((stripe as unknown as { _api: { httpClient: { getClientName(): string } } })._api.httpClient.getClientName(), "fetch");
+});
+
+test("Stripe test-key validation fails closed", () => {
+  assert.throws(() => createStripeTestClient(undefined), /STRIPE_TEST_SECRET_KEY is required/);
+  assert.throws(() => createStripeTestClient("sk_live_not_permitted"), /Live Stripe keys are not permitted/);
+  assert.throws(() => createStripeTestClient("not-a-stripe-key"), /T06 requires a Stripe test secret key/);
 });
 
 test("migration declares immutable snapshots, role grants, RLS, and fixed test constraints", () => {
