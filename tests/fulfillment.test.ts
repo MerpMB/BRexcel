@@ -53,6 +53,12 @@ test("webhook route keeps raw-body verification and avoids browser credentials",
   assert.equal(source.includes("stripe-signature"), true);
 });
 
+test("terminal fulfillment outcomes acknowledge successfully without weakening webhook verification", () => {
+  const source = readFileSync("app/api/stripe/webhook/route.ts", "utf8");
+  assert.match(source, /await processVerifiedStripeEvent\([\s\S]*?;\s*return response\(200, "Processed"\)/);
+  assert.match(source, /error instanceof RetryableProviderError\) return response\(503/);
+});
+
 test("T07 migration keeps provider evidence private and removes generic entitlement grants", () => {
   const migration = readFileSync("supabase/migrations/20260911111516_t07_verified_payment_fulfillment.sql", "utf8");
   for (const fragment of ["create table commerce.provider_events", "enable row level security", "revoke all on table commerce.provider_events from public, anon, authenticated, service_role", "revoke all on table commerce.provider_events from commerce_runtime", "provider_payment_reference", "verified_at", "source_payment_attempt_id", "entitlements_one_per_order", "legacy authorized payment attempts require lead disposition", "payment_status_mismatch"]) assert.equal(migration.includes(fragment), true, `missing T07 control: ${fragment}`);

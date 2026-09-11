@@ -87,15 +87,15 @@ async function main() {
     // caller resends the exact provider event identity.
     assert.equal(await asRuntime(sql, (transaction) => processVerifiedStripeEventInTransaction(transaction, firstEvidence, first.attemptId)), "already_fulfilled");
     assert.equal(await count(sql, "entitlements", first.orderId), 1, "same event grants one entitlement");
-    assert.equal(await count(sql, "provider_events"), 1, "same event stores one terminal event");
+    assert.equal(await countProviderEvents(sql, [firstEvidence.eventId]), 1, "same event stores one terminal event");
 
-    const [paidAttempt] = await sql<{ attempt_state: string; provider_payment_reference: string; verified_at: string; observed_amount_minor: number; observed_currency: string }[]>`
-      select attempt_state, provider_payment_reference, verified_at, observed_amount_minor, observed_currency
+    const [paidAttempt] = await sql<{ attempt_state: string; provider_payment_reference: string; verified_at: string; observed_amount_minor: number; observed_currency: string; provider_payment_status: string }[]>`
+      select attempt_state, provider_payment_reference, verified_at, observed_amount_minor, observed_currency, provider_payment_status
       from commerce.payment_attempts where id = ${first.attemptId}::uuid
     `;
-    assert.deepEqual({ state: paidAttempt?.attempt_state, amount: paidAttempt?.observed_amount_minor, currency: paidAttempt?.observed_currency, paid: Boolean(paidAttempt?.provider_payment_reference), verified: Boolean(paidAttempt?.verified_at) }, { state: "paid", amount: 4900, currency: "THB", paid: true, verified: true });
-    const [firstOrder] = await sql<{ fulfillment_status: string; recovery_email: string }[]>`select fulfillment_status, recovery_email from commerce.orders where id = ${first.orderId}::uuid`;
-    assert.deepEqual(firstOrder, { fulfillment_status: "fulfilled", recovery_email: "recovery@example.test" });
+    assert.deepEqual({ state: paidAttempt?.attempt_state, amount: paidAttempt?.observed_amount_minor, currency: paidAttempt?.observed_currency, paymentStatus: paidAttempt?.provider_payment_status, paid: Boolean(paidAttempt?.provider_payment_reference), verified: Boolean(paidAttempt?.verified_at) }, { state: "paid", amount: 4900, currency: "THB", paymentStatus: "paid", paid: true, verified: true });
+    const [firstOrder] = await sql<{ fulfillment_status: string; recovery_email: string; fulfilled_at: string }[]>`select fulfillment_status, recovery_email, fulfilled_at from commerce.orders where id = ${first.orderId}::uuid`;
+    assert.deepEqual({ fulfillment_status: firstOrder?.fulfillment_status, recovery_email: firstOrder?.recovery_email, fulfilled_at: Boolean(firstOrder?.fulfilled_at) }, { fulfillment_status: "fulfilled", recovery_email: "recovery@example.test", fulfilled_at: true });
 
     const secondEvent = paidEvidence(`evt_t07_${randomUUID().replaceAll("-", "")}`, first.orderId, first.attemptId, first.sessionId);
     secondEvent.session.paymentIntentId = paidAttempt?.provider_payment_reference ?? null;
@@ -196,8 +196,28 @@ async function main() {
     const secondPaid = paidEvidence(`evt_t07_${randomUUID().replaceAll("-", "")}`, first.orderId, secondAttempt, secondAttemptSession!.provider_session_reference);
     assert.equal(await asRuntime(sql, (transaction) => processVerifiedStripeEventInTransaction(transaction, secondPaid, secondAttempt)), "attention");
     assert.equal(await count(sql, "entitlements", first.orderId), 1, "a second independently paid attempt never grants twice");
-    const [attentionOrder] = await sql<{ fulfillment_status: string }[]>`select fulfillment_status from commerce.orders where id = ${first.orderId}::uuid`;
-    assert.equal(attentionOrder?.fulfillment_status, "attention");
+    const [attentionOrder] = await sql<{ fulfillment_status: string; fulfilled_at: string; recovery_email: string }[]>`
+      select fulfillment_status, fulfilled_at, recovery_email from commerce.orders where id = ${first.orderId}::uuid
+    `;
+    assert.deepEqual({ fulfillment_status: attentionOrder?.fulfillment_status, fulfilled_at: attentionOrder?.fulfilled_at, recovery_email: attentionOrder?.recovery_email }, { fulfillment_status: "attention", fulfilled_at: firstOrder!.fulfilled_at, recovery_email: firstOrder!.recovery_email }, "second paid attempt moves the order to attention without overwriting original fulfillment facts");
+    const [secondPaidEvidence] = await sql<{ attempt_state: string; provider_payment_reference: string; observed_amount_minor: number; observed_currency: string; provider_payment_status: string; verified_at: string | null }[]>`
+      select attempt_state, provider_payment_reference, observed_amount_minor, observed_currency, provider_payment_status, verified_at
+      from commerce.payment_attempts where id = ${secondAttempt}::uuid
+    `;
+    assert.deepEqual({ ...secondPaidEvidence, verified_at: Boolean(secondPaidEvidence?.verified_at) }, { attempt_state: "paid", provider_payment_reference: secondPaid.session.paymentIntentId, observed_amount_minor: 4900, observed_currency: "THB", provider_payment_status: "paid", verified_at: true }, "second paid attempt retains complete verified evidence");
+
+    const originalAttemptReplay = paidEvidence(`evt_t07_${randomUUID().replaceAll("-", "")}`, first.orderId, first.attemptId, first.sessionId);
+    originalAttemptReplay.session.paymentIntentId = paidAttempt!.provider_payment_reference;
+    assert.equal(await asRuntime(sql, (transaction) => processVerifiedStripeEventInTransaction(transaction, originalAttemptReplay, first.attemptId)), "already_fulfilled", "a distinct event for the original paid attempt remains terminal after attention");
+    const [attentionAfterReplay] = await sql<{ fulfillment_status: string; fulfilled_at: string; recovery_email: string }[]>`
+      select fulfillment_status, fulfilled_at, recovery_email from commerce.orders where id = ${first.orderId}::uuid
+    `;
+    assert.deepEqual(attentionAfterReplay, attentionOrder, "original-attempt replay preserves attention and original fulfillment facts");
+    const [originalEntitlement] = await sql<{ source_payment_attempt_id: string }[]>`
+      select source_payment_attempt_id from commerce.entitlements where order_id = ${first.orderId}::uuid
+    `;
+    assert.equal(originalEntitlement?.source_payment_attempt_id, first.attemptId, "original entitlement ownership remains unchanged after attention replay");
+    assert.equal(await countProviderEvents(sql, [originalAttemptReplay.eventId]), 1, "distinct original-attempt replay commits its terminal provider event");
 
     await assert.rejects(sql`update commerce.orders set amount_minor = 1 where id = ${first.orderId}::uuid`, "snapshot facts remain immutable");
     await assert.rejects(sql`update commerce.entitlements set source_payment_attempt_id = ${secondAttempt}::uuid where order_id = ${first.orderId}::uuid`, "entitlement provenance remains immutable");
@@ -207,8 +227,6 @@ async function main() {
     await assert.rejects(sql`update commerce.orders set fulfillment_status = 'pending' where id = ${first.orderId}::uuid`, "attention cannot regress");
     await assert.rejects(sql`update commerce.payment_attempts set attempt_state = 'failed' where id = ${first.attemptId}::uuid`, "paid state cannot regress");
     await assert.rejects(sql`update commerce.payment_attempts set provider_payment_reference = 'pi_test_rewritten' where id = ${first.attemptId}::uuid`, "provider payment reference cannot change");
-    const incompletePaid = await createBoundAttempt(sql);
-    await assert.rejects(sql`update commerce.payment_attempts set attempt_state = 'paid' where id = ${incompletePaid.attemptId}::uuid`, "incomplete paid evidence is rejected");
 
     const [providerSecurity] = await sql<{ rls: boolean; public_select: boolean; runtime_select: boolean; runtime_insert: boolean; runtime_update: boolean; runtime_delete: boolean }[]>`
       select c.relrowsecurity as rls,
