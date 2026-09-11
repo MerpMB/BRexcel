@@ -19,10 +19,11 @@
   ],
   "vars": {
     "COMMERCE_PLATFORM": "worker",
-    "APP_ORIGIN": "https://brexcel-staging.phpm095.workers.dev"
+    "APP_ORIGIN": "https://brexcel-staging.phpm095.workers.dev",
+    "STRIPE_TEST_ACCOUNT_ID": "acct_1UEBit2I3MHghqus"
   },
   "secrets": {
-    "required": ["STRIPE_TEST_SECRET_KEY"]
+    "required": ["STRIPE_TEST_SECRET_KEY", "STRIPE_TEST_WEBHOOK_SECRET"]
   },
   "observability": {
     "enabled": true

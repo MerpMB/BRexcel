@@ -1,7 +1,6 @@
 import "server-only";
 
 import type { CreateCommerceAttemptRequest } from "./contract";
-<<<<<<< HEAD
 import { withCommerceDatabase } from "./database";
 import { type AnomalyCode, type VerifiedStripeEvidence, isTerminalProviderEvent, processVerifiedStripeEventInTransaction } from "./fulfillment-core";
 import { bindProviderSessionReferenceInTransaction, persistTrustedCommerceAttemptInTransaction } from "./persistence-core";
