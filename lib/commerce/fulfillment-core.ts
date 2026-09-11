@@ -211,7 +211,8 @@ export async function processVerifiedStripeEventInTransaction(transaction: postg
   const recoveryEmail = evidence.session.recoveryEmail?.trim() || null;
   await transaction`
     update commerce.orders
-    set fulfillment_status = 'fulfilled', fulfilled_at = coalesce(fulfilled_at, now()),
+    set fulfillment_status = case when fulfillment_status = 'attention' then 'attention' else 'fulfilled' end,
+        fulfilled_at = coalesce(fulfilled_at, now()),
         recovery_email = coalesce(recovery_email, ${recoveryEmail})
     where id = ${order.id}::uuid
   `;
