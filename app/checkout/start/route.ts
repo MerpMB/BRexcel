@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createGuestPurchaseCapability, isGuestPurchaseCapability } from "@/lib/commerce/contract";
-import { assertExactOrigin, guestCheckoutCookieName, guestCheckoutCookieOptions, parseCheckoutStartInput, resolveApprovedCheckoutOffer } from "@/lib/commerce/checkout-contract";
+import { checkoutSecurityHeaders, startWithPreparedGuestCheckoutCapability } from "@/lib/commerce/checkout-capability";
+import { assertExactOrigin, guestCheckoutCookieName, parseCheckoutStartInput, resolveApprovedCheckoutOffer } from "@/lib/commerce/checkout-contract";
 import { startGuestHostedCheckout } from "@/lib/commerce/checkout";
 
 function configuredOrigin() {
@@ -10,7 +10,11 @@ function configuredOrigin() {
 }
 
 function badRequest(message: string) {
-  return new NextResponse(message, { status: 400, headers: { "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" } });
+  return new NextResponse(message, { status: 400, headers: checkoutSecurityHeaders });
+}
+
+function preparationRequired() {
+  return new NextResponse("Prepare checkout at /checkout/prepare and try again.", { status: 409, headers: checkoutSecurityHeaders });
 }
 
 export async function POST(request: NextRequest) {
@@ -24,14 +28,13 @@ export async function POST(request: NextRequest) {
     }
     resolveApprovedCheckoutOffer(parseCheckoutStartInput(values));
 
-    const existingCapability = request.cookies.get(guestCheckoutCookieName)?.value;
-    const capability = existingCapability && isGuestPurchaseCapability(existingCapability) ? existingCapability : createGuestPurchaseCapability();
-    const setCapability = capability !== existingCapability;
-    const started = await startGuestHostedCheckout(capability);
-    const response = NextResponse.redirect(started.checkoutUrl, 303);
-    if (setCapability) response.cookies.set(guestCheckoutCookieName, capability, guestCheckoutCookieOptions);
-    response.headers.set("Cache-Control", "no-store");
-    response.headers.set("Referrer-Policy", "no-referrer");
+    const result = await startWithPreparedGuestCheckoutCapability(
+      request.cookies.get(guestCheckoutCookieName)?.value,
+      startGuestHostedCheckout,
+    );
+    if (result.kind === "preparation-required") return preparationRequired();
+    const response = NextResponse.redirect(result.started.checkoutUrl, 303);
+    for (const [name, value] of Object.entries(checkoutSecurityHeaders)) response.headers.set(name, value);
     return response;
   } catch (error) {
     return badRequest(error instanceof Error ? error.message : "Unable to start checkout");
