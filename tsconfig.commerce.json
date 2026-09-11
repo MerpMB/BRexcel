@@ -8,5 +8,5 @@
     "moduleResolution": "node",
     "verbatimModuleSyntax": false
   },
-  "include": ["lib/commerce/**/*.ts", "scripts/test-commerce-integration.ts", "scripts/test-fulfillment-integration.ts", "scripts/test-checkout-stripe.ts", "tests/commerce.test.ts", "tests/checkout.test.ts", "tests/fulfillment.test.ts"]
+  "include": ["lib/commerce/**/*.ts", "scripts/test-commerce-integration.ts", "scripts/test-fulfillment-integration.ts", "scripts/test-fulfillment-migrations.ts", "scripts/test-checkout-stripe.ts", "tests/commerce.test.ts", "tests/checkout.test.ts", "tests/fulfillment.test.ts"]
 }

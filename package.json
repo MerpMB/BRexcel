@@ -12,6 +12,7 @@
     "test:checkout": "tsc -p tsconfig.commerce.json && node --test .commerce-build/tests/checkout.test.js",
     "test:fulfillment": "tsc -p tsconfig.commerce.json && node --test .commerce-build/tests/fulfillment.test.js",
     "test:fulfillment:integration": "tsc -p tsconfig.commerce.json && node .commerce-build/scripts/test-fulfillment-integration.js",
+    "test:fulfillment:migrations": "tsc -p tsconfig.commerce.json && node .commerce-build/scripts/test-fulfillment-migrations.js",
     "test:checkout:stripe": "tsc -p tsconfig.commerce.json && node .commerce-build/scripts/test-checkout-stripe.js",
     "test:commerce:integration": "tsc -p tsconfig.commerce.json && node .commerce-build/scripts/test-commerce-integration.js",
     "validate:commerce": "npm run test:commerce && npm run test:commerce:integration"

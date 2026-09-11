@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import postgres from "postgres";
 import { bindProviderSessionReferenceInTransaction, persistTrustedCommerceAttemptInTransaction } from "../lib/commerce/persistence-core";
-import { type VerifiedStripeEvidence, processVerifiedStripeEventInTransaction } from "../lib/commerce/fulfillment-core";
+import { type VerifiedStripeEvidence, grantVerifiedPurchaseInTransaction, processVerifiedStripeEventInTransaction } from "../lib/commerce/fulfillment-core";
 
 function connectionString() {
   const value = process.env.COMMERCE_DATABASE_URL ?? process.env.DB_URL;
@@ -69,12 +69,22 @@ async function count(sql: postgres.Sql, table: "entitlements" | "provider_events
   return Number(rows[0]?.count ?? 0);
 }
 
+async function countProviderEvents(sql: postgres.Sql, eventIds: string[]) {
+  const [row] = await sql<{ count: string }[]>`
+    select count(*)::text as count from commerce.provider_events
+    where provider = 'stripe' and environment = 'test' and provider_event_id = any(${eventIds})
+  `;
+  return Number(row?.count ?? 0);
+}
+
 async function main() {
   const sql = postgres(connectionString(), { max: 12, prepare: true });
   try {
     const first = await createBoundAttempt(sql);
     const firstEvidence = paidEvidence(`evt_t07_${randomUUID().replaceAll("-", "")}`, first.orderId, first.attemptId, first.sessionId);
     assert.equal(await asRuntime(sql, (transaction) => processVerifiedStripeEventInTransaction(transaction, firstEvidence, first.attemptId)), "fulfilled");
+    // Simulates a lost HTTP acknowledgement: the commit happened, then the
+    // caller resends the exact provider event identity.
     assert.equal(await asRuntime(sql, (transaction) => processVerifiedStripeEventInTransaction(transaction, firstEvidence, first.attemptId)), "already_fulfilled");
     assert.equal(await count(sql, "entitlements", first.orderId), 1, "same event grants one entitlement");
     assert.equal(await count(sql, "provider_events"), 1, "same event stores one terminal event");
@@ -91,6 +101,18 @@ async function main() {
     secondEvent.session.paymentIntentId = paidAttempt?.provider_payment_reference ?? null;
     assert.equal(await asRuntime(sql, (transaction) => processVerifiedStripeEventInTransaction(transaction, secondEvent, first.attemptId)), "already_fulfilled");
     assert.equal(await count(sql, "entitlements", first.orderId), 1, "distinct events for one paid Session do not duplicate grants");
+
+    const concurrentDistinctA = paidEvidence(`evt_t07_${randomUUID().replaceAll("-", "")}`, first.orderId, first.attemptId, first.sessionId);
+    const concurrentDistinctB = paidEvidence(`evt_t07_${randomUUID().replaceAll("-", "")}`, first.orderId, first.attemptId, first.sessionId);
+    concurrentDistinctA.session.paymentIntentId = paidAttempt?.provider_payment_reference ?? null;
+    concurrentDistinctB.session.paymentIntentId = paidAttempt?.provider_payment_reference ?? null;
+    const distinctResults = await Promise.all([
+      asRuntime(sql, (transaction) => processVerifiedStripeEventInTransaction(transaction, concurrentDistinctA, first.attemptId)),
+      asRuntime(sql, (transaction) => processVerifiedStripeEventInTransaction(transaction, concurrentDistinctB, first.attemptId)),
+    ]);
+    assert.deepEqual(distinctResults.sort(), ["already_fulfilled", "already_fulfilled"], "distinct paid event IDs for one Session converge without duplicate grants");
+    assert.equal(await countProviderEvents(sql, [concurrentDistinctA.eventId, concurrentDistinctB.eventId]), 2, "each distinct terminal event is retained");
+    assert.equal(await count(sql, "entitlements", first.orderId), 1);
 
     const negative = paidEvidence(`evt_t07_${randomUUID().replaceAll("-", "")}`, first.orderId, first.attemptId, first.sessionId);
     negative.eventType = "checkout.session.expired";
@@ -116,13 +138,36 @@ async function main() {
     assert.equal(await asRuntime(sql, (transaction) => processVerifiedStripeEventInTransaction(transaction, mismatchEvidence, mismatch.attemptId)), "attention");
     assert.equal(await count(sql, "entitlements", mismatch.orderId), 0, "invalid provider truth never grants");
 
+    const beforeGrant = await createBoundAttempt(sql);
+    const beforeGrantEvidence = paidEvidence(`evt_t07_${randomUUID().replaceAll("-", "")}`, beforeGrant.orderId, beforeGrant.attemptId, beforeGrant.sessionId);
+    await sql.unsafe(`
+      create function commerce.t07_fail_before_entitlement_grant() returns trigger
+      language plpgsql as $$ begin raise exception 't07 before grant sentinel'; end $$;
+      create trigger aa_t07_fail_before_entitlement_grant
+      before insert on commerce.entitlements for each row
+      execute function commerce.t07_fail_before_entitlement_grant();
+    `);
+    await assert.rejects(asRuntime(sql, (transaction) => processVerifiedStripeEventInTransaction(transaction, beforeGrantEvidence, beforeGrant.attemptId)), /before grant sentinel/);
+    await sql`drop trigger aa_t07_fail_before_entitlement_grant on commerce.entitlements`;
+    await sql`drop function commerce.t07_fail_before_entitlement_grant()`;
+    assert.equal(await count(sql, "entitlements", beforeGrant.orderId), 0, "failure before grant leaves no entitlement");
+    const [beforeGrantAttempt] = await sql<{ attempt_state: string; verified_at: string | null }[]>`select attempt_state, verified_at from commerce.payment_attempts where id = ${beforeGrant.attemptId}::uuid`;
+    assert.deepEqual(beforeGrantAttempt, { attempt_state: "created", verified_at: null }, "failure before grant rolls back paid evidence");
+    assert.equal(await countProviderEvents(sql, [beforeGrantEvidence.eventId]), 0, "failure before grant leaves no terminal marker");
+    assert.equal(await asRuntime(sql, (transaction) => processVerifiedStripeEventInTransaction(transaction, beforeGrantEvidence, beforeGrant.attemptId)), "fulfilled", "retry after before-grant rollback succeeds once");
+
     const rollback = await createBoundAttempt(sql);
     const rollbackEvidence = paidEvidence(`evt_t07_${randomUUID().replaceAll("-", "")}`, rollback.orderId, rollback.attemptId, rollback.sessionId);
     await assert.rejects(asRuntime(sql, async (transaction) => {
       await processVerifiedStripeEventInTransaction(transaction, rollbackEvidence, rollback.attemptId);
+      const [inserted] = await transaction<{ count: string }[]>`select count(*)::text as count from commerce.entitlements where order_id = ${rollback.orderId}::uuid`;
+      assert.equal(inserted?.count, "1", "rollback sentinel executes after entitlement insert");
       throw new Error("rollback sentinel after fulfillment");
     }));
     assert.equal(await count(sql, "entitlements", rollback.orderId), 0, "rollback leaves no entitlement");
+    const [rolledBackAttempt] = await sql<{ attempt_state: string; verified_at: string | null }[]>`select attempt_state, verified_at from commerce.payment_attempts where id = ${rollback.attemptId}::uuid`;
+    assert.deepEqual(rolledBackAttempt, { attempt_state: "created", verified_at: null }, "after-insert rollback leaves no paid evidence");
+    assert.equal(await countProviderEvents(sql, [rollbackEvidence.eventId]), 0, "after-insert rollback leaves no terminal marker");
     assert.equal(await asRuntime(sql, (transaction) => processVerifiedStripeEventInTransaction(transaction, rollbackEvidence, rollback.attemptId)), "fulfilled", "rolled-back event is processable again");
 
     const concurrent = await createBoundAttempt(sql);
@@ -151,7 +196,35 @@ async function main() {
 
     await assert.rejects(sql`update commerce.orders set amount_minor = 1 where id = ${first.orderId}::uuid`, "snapshot facts remain immutable");
     await assert.rejects(sql`update commerce.entitlements set source_payment_attempt_id = ${secondAttempt}::uuid where order_id = ${first.orderId}::uuid`, "entitlement provenance remains immutable");
-    console.log("Fulfillment integration passed: real PostgreSQL transactions, monotonic payment evidence, one entitlement, duplicate convergence, rollback, and attention handling.");
+    await assert.rejects(asRuntime(sql, (transaction) => grantVerifiedPurchaseInTransaction(transaction, first.orderId, secondAttempt)), /conflicting entitlement source/, "conflicting verified provenance is rejected");
+    await assert.rejects(sql`update commerce.orders set fulfilled_at = now() where id = ${first.orderId}::uuid`, "fulfilled timestamp cannot be rewritten");
+    await assert.rejects(sql`update commerce.orders set recovery_email = 'replacement@example.test' where id = ${first.orderId}::uuid`, "recovery destination cannot be replaced");
+    await assert.rejects(sql`update commerce.orders set fulfillment_status = 'pending' where id = ${first.orderId}::uuid`, "attention cannot regress");
+    await assert.rejects(sql`update commerce.payment_attempts set attempt_state = 'failed' where id = ${first.attemptId}::uuid`, "paid state cannot regress");
+    await assert.rejects(sql`update commerce.payment_attempts set provider_payment_reference = 'pi_test_rewritten' where id = ${first.attemptId}::uuid`, "provider payment reference cannot change");
+    const incompletePaid = await createBoundAttempt(sql);
+    await assert.rejects(sql`update commerce.payment_attempts set attempt_state = 'paid' where id = ${incompletePaid.attemptId}::uuid`, "incomplete paid evidence is rejected");
+
+    const [providerSecurity] = await sql<{ rls: boolean; public_select: boolean; runtime_select: boolean; runtime_insert: boolean; runtime_update: boolean; runtime_delete: boolean }[]>`
+      select c.relrowsecurity as rls,
+        has_table_privilege('public', 'commerce.provider_events', 'select') as public_select,
+        has_table_privilege('commerce_runtime', 'commerce.provider_events', 'select') as runtime_select,
+        has_table_privilege('commerce_runtime', 'commerce.provider_events', 'insert') as runtime_insert,
+        has_table_privilege('commerce_runtime', 'commerce.provider_events', 'update') as runtime_update,
+        has_table_privilege('commerce_runtime', 'commerce.provider_events', 'delete') as runtime_delete
+      from pg_class c join pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = 'commerce' and c.relname = 'provider_events'
+    `;
+    assert.deepEqual(providerSecurity, { rls: true, public_select: false, runtime_select: true, runtime_insert: true, runtime_update: false, runtime_delete: false });
+    for (const role of ["anon", "authenticated", "service_role"]) {
+      const roleExists = (await sql<{ exists: boolean }[]>`select exists(select 1 from pg_roles where rolname = ${role}) as exists`)[0]?.exists;
+      if (roleExists) await assert.rejects(sql.begin(async (transaction) => {
+        await transaction.unsafe(`set local role ${role}`);
+        await transaction`select * from commerce.provider_events limit 1`;
+      }), `${role} cannot read provider events`);
+    }
+    await assert.rejects(asRuntime(sql, async (transaction) => transaction`update commerce.provider_events set outcome = 'attention' where false`), "runtime cannot update provider events");
+    console.log("Fulfillment integration passed: real PostgreSQL transactions, rollback seams, duplicate convergence, private provider-event security, monotonic evidence, and one-entitlement invariants.");
   } finally {
     await sql.end({ timeout: 5 });
   }
