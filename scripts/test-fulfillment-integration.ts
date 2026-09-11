@@ -102,23 +102,28 @@ async function main() {
     assert.equal(await asRuntime(sql, (transaction) => processVerifiedStripeEventInTransaction(transaction, secondEvent, first.attemptId)), "already_fulfilled");
     assert.equal(await count(sql, "entitlements", first.orderId), 1, "distinct events for one paid Session do not duplicate grants");
 
-    const concurrentDistinctA = paidEvidence(`evt_t07_${randomUUID().replaceAll("-", "")}`, first.orderId, first.attemptId, first.sessionId);
-    const concurrentDistinctB = paidEvidence(`evt_t07_${randomUUID().replaceAll("-", "")}`, first.orderId, first.attemptId, first.sessionId);
-    concurrentDistinctA.session.paymentIntentId = paidAttempt?.provider_payment_reference ?? null;
-    concurrentDistinctB.session.paymentIntentId = paidAttempt?.provider_payment_reference ?? null;
+    const concurrentDistinct = await createBoundAttempt(sql);
+    const concurrentDistinctA = paidEvidence(`evt_t07_${randomUUID().replaceAll("-", "")}`, concurrentDistinct.orderId, concurrentDistinct.attemptId, concurrentDistinct.sessionId);
+    const concurrentDistinctB = paidEvidence(`evt_t07_${randomUUID().replaceAll("-", "")}`, concurrentDistinct.orderId, concurrentDistinct.attemptId, concurrentDistinct.sessionId);
+    concurrentDistinctB.session.paymentIntentId = concurrentDistinctA.session.paymentIntentId;
     const distinctResults = await Promise.all([
-      asRuntime(sql, (transaction) => processVerifiedStripeEventInTransaction(transaction, concurrentDistinctA, first.attemptId)),
-      asRuntime(sql, (transaction) => processVerifiedStripeEventInTransaction(transaction, concurrentDistinctB, first.attemptId)),
+      asRuntime(sql, (transaction) => processVerifiedStripeEventInTransaction(transaction, concurrentDistinctA, concurrentDistinct.attemptId)),
+      asRuntime(sql, (transaction) => processVerifiedStripeEventInTransaction(transaction, concurrentDistinctB, concurrentDistinct.attemptId)),
     ]);
-    assert.deepEqual(distinctResults.sort(), ["already_fulfilled", "already_fulfilled"], "distinct paid event IDs for one Session converge without duplicate grants");
+    assert.deepEqual(distinctResults.sort(), ["already_fulfilled", "fulfilled"], "distinct paid event IDs for one Session converge without duplicate grants");
     assert.equal(await countProviderEvents(sql, [concurrentDistinctA.eventId, concurrentDistinctB.eventId]), 2, "each distinct terminal event is retained");
-    assert.equal(await count(sql, "entitlements", first.orderId), 1);
+    assert.equal(await count(sql, "entitlements", concurrentDistinct.orderId), 1);
 
     const negative = paidEvidence(`evt_t07_${randomUUID().replaceAll("-", "")}`, first.orderId, first.attemptId, first.sessionId);
     negative.eventType = "checkout.session.expired";
     negative.session.paymentStatus = "unpaid";
     negative.session.paymentIntentId = null;
     assert.equal(await asRuntime(sql, (transaction) => processVerifiedStripeEventInTransaction(transaction, negative, first.attemptId)), "already_fulfilled");
+    const failure = paidEvidence(`evt_t07_${randomUUID().replaceAll("-", "")}`, first.orderId, first.attemptId, first.sessionId);
+    failure.eventType = "checkout.session.async_payment_failed";
+    failure.session.paymentStatus = "unpaid";
+    failure.session.paymentIntentId = null;
+    assert.equal(await asRuntime(sql, (transaction) => processVerifiedStripeEventInTransaction(transaction, failure, first.attemptId)), "already_fulfilled");
     const [preserved] = await sql<{ attempt_state: string }[]>`select attempt_state from commerce.payment_attempts where id = ${first.attemptId}::uuid`;
     assert.equal(preserved?.attempt_state, "paid", "negative events never regress paid evidence");
 
