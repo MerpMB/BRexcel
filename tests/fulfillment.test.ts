@@ -55,7 +55,7 @@ test("webhook route keeps raw-body verification and avoids browser credentials",
 
 test("T07 migration keeps provider evidence private and removes generic entitlement grants", () => {
   const migration = readFileSync("supabase/migrations/20260911111516_t07_verified_payment_fulfillment.sql", "utf8");
-  for (const fragment of ["create table commerce.provider_events", "enable row level security", "revoke all on table commerce.provider_events from public, anon, authenticated, service_role", "provider_payment_reference", "verified_at", "source_payment_attempt_id", "entitlements_one_per_order", "legacy authorized payment attempts require lead disposition"]) assert.equal(migration.includes(fragment), true, `missing T07 control: ${fragment}`);
+  for (const fragment of ["create table commerce.provider_events", "enable row level security", "revoke all on table commerce.provider_events from public, anon, authenticated, service_role", "provider_payment_reference", "verified_at", "source_payment_attempt_id", "entitlements_one_per_order", "legacy authorized payment attempts require lead disposition", "payment_status_mismatch"]) assert.equal(migration.includes(fragment), true, `missing T07 control: ${fragment}`);
   assert.equal(readFileSync("lib/commerce/contract.ts", "utf8").includes("grantEntitlement"), false);
   assert.match(readFileSync("lib/commerce/fulfillment-core.ts", "utf8"), /grantVerifiedPurchaseInTransaction/);
 });
