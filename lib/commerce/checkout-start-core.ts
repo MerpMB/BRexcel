@@ -15,7 +15,6 @@ export async function startGuestHostedCheckoutWithDependencies(capability: strin
     creationIdentity: deriveStableCommerceIdentity(capability, "BRexcel/order/v1"),
     idempotencyKey: deriveStableCommerceIdentity(capability, "BRexcel/attempt/v1"),
     guestCapability: capability,
-    grantEntitlement: false,
   });
 
   if (attempt.providerSessionReference) {

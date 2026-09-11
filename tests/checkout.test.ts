@@ -177,6 +177,6 @@ test("Stripe idempotency is stable and checkout stays server-only without fulfil
   assert.equal(stripeCheckoutIdempotencyKey(attemptId), stripeCheckoutIdempotencyKey(attemptId));
   assert.match(readFileSync("lib/commerce/stripe.ts", "utf8"), /import "server-only"/);
   assert.match(readFileSync("lib/commerce/checkout.ts", "utf8"), /import "server-only"/);
-  assert.match(readFileSync("lib/commerce/checkout-start-core.ts", "utf8"), /grantEntitlement: false/);
+  assert.equal(readFileSync("lib/commerce/checkout-start-core.ts", "utf8").includes("grantEntitlement"), false);
   assert.equal(readFileSync("app/checkout/success/page.tsx", "utf8").includes("ownership granted"), false);
 });

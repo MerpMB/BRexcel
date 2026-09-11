@@ -3,7 +3,6 @@ import { commerceTestOffer, hashGuestPurchaseCapability, type CreateCommerceAtte
 
 type OrderRow = { id: string };
 type AttemptRow = { id: string; order_id: string; provider_session_reference: string | null };
-type EntitlementRow = { id: string };
 
 /**
  * Persists only the fixed internal test offer. It accepts a transaction-capable SQL
@@ -21,11 +20,11 @@ export async function persistTrustedCommerceAttemptInTransaction(transaction: po
   const insertedOrder = await transaction<OrderRow[]>`
       insert into commerce.orders (
         creation_identity, offer_id, product_id, title, amount_minor, currency,
-        quantity, environment, offer_state, guest_capability_digest
+        quantity, environment, offer_state, version_id, guest_capability_digest
       ) values (
         ${request.creationIdentity}::uuid, ${commerceTestOffer.offerId}, ${commerceTestOffer.productId},
         ${commerceTestOffer.title}, ${commerceTestOffer.amountMinor}, ${commerceTestOffer.currency},
-        ${commerceTestOffer.quantity}, ${commerceTestOffer.environment}, ${commerceTestOffer.offerState}, ${capabilityDigest}
+        ${commerceTestOffer.quantity}, ${commerceTestOffer.environment}, ${commerceTestOffer.offerState}, ${commerceTestOffer.versionId}, ${capabilityDigest}
       )
       on conflict (creation_identity) do nothing
       returning id
@@ -54,18 +53,7 @@ export async function persistTrustedCommerceAttemptInTransaction(transaction: po
   if (!attempt) throw new Error("payment attempt could not be created or recovered");
   if (attempt.order_id !== order.id) throw new Error("idempotency key belongs to another order");
 
-  let entitlementId: string | undefined;
-  if (request.grantEntitlement) {
-    const entitlement = await transaction<EntitlementRow[]>`
-        insert into commerce.entitlements (order_id, product_id, grant_state)
-        values (${order.id}::uuid, ${commerceTestOffer.productId}, 'active')
-        on conflict (order_id, product_id) do update set grant_state = commerce.entitlements.grant_state
-        returning id
-    `;
-    entitlementId = entitlement[0]?.id;
-  }
-
-  return { orderId: order.id, attemptId: attempt.id, providerSessionReference: attempt.provider_session_reference ?? undefined, entitlementId, reused: insertedAttempt.length === 0 };
+  return { orderId: order.id, attemptId: attempt.id, providerSessionReference: attempt.provider_session_reference ?? undefined, reused: insertedAttempt.length === 0 };
 }
 
 export async function bindProviderSessionReferenceInTransaction(transaction: postgres.TransactionSql, attemptId: string, providerSessionReference: string) {

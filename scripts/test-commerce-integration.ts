@@ -33,17 +33,15 @@ async function main() {
   try {
     const creationIdentity = randomUUID();
     const idempotencyKey = randomUUID();
-    const first = await persistAsCommerceRuntime(sql, { creationIdentity, idempotencyKey, providerSessionReference: "cs_test_" + randomUUID().replaceAll("-", ""), grantEntitlement: true, guestCapability: createGuestPurchaseCapability() });
+    const first = await persistAsCommerceRuntime(sql, { creationIdentity, idempotencyKey, providerSessionReference: "cs_test_" + randomUUID().replaceAll("-", ""), guestCapability: createGuestPurchaseCapability() });
     assert.equal(first.reused, false);
-    assert.ok(first.entitlementId);
 
-    const retry = await persistAsCommerceRuntime(sql, { creationIdentity, idempotencyKey, grantEntitlement: true });
+    const retry = await persistAsCommerceRuntime(sql, { creationIdentity, idempotencyKey });
     assert.equal(retry.reused, true);
     assert.equal(retry.orderId, first.orderId);
     assert.equal(retry.attemptId, first.attemptId);
-    assert.equal(retry.entitlementId, first.entitlementId);
 
-    await expectReject(() => persistAsCommerceRuntime(sql, { creationIdentity: randomUUID(), idempotencyKey, grantEntitlement: false }), "idempotency collisions across orders reject");
+    await expectReject(() => persistAsCommerceRuntime(sql, { creationIdentity: randomUUID(), idempotencyKey }), "idempotency collisions across orders reject");
     await expectReject(() => sql`update commerce.orders set title = 'changed' where id = ${first.orderId}::uuid`, "order snapshots are immutable");
 
     const duplicatedReference = "cs_test_" + randomUUID().replaceAll("-", "");
@@ -68,44 +66,26 @@ async function main() {
 
     const concurrentIdentity = randomUUID();
     const parallel = await Promise.all([
-      persistAsCommerceRuntime(sql, { creationIdentity: concurrentIdentity, idempotencyKey: randomUUID(), grantEntitlement: true }),
-      persistAsCommerceRuntime(sql, { creationIdentity: concurrentIdentity, idempotencyKey: randomUUID(), grantEntitlement: true }),
+      persistAsCommerceRuntime(sql, { creationIdentity: concurrentIdentity, idempotencyKey: randomUUID() }),
+      persistAsCommerceRuntime(sql, { creationIdentity: concurrentIdentity, idempotencyKey: randomUUID() }),
     ]);
     assert.equal(parallel[0].orderId, parallel[1].orderId);
-    assert.equal(parallel[0].entitlementId, parallel[1].entitlementId, "concurrent grants recover one entitlement");
 
     const [orders] = await sql<{ count: string }[]>`select count(*)::text as count from commerce.orders where creation_identity = ${concurrentIdentity}::uuid`;
     assert.equal(orders.count, "1");
-    const [entitlements] = await sql<{ count: string }[]>`select count(*)::text as count from commerce.entitlements where order_id = ${parallel[0].orderId}::uuid`;
-    assert.equal(entitlements.count, "1", "concurrent same-source grants create exactly one entitlement");
 
     const rollbackIdentity = randomUUID();
     await expectReject(() => sql.begin(async (transaction) => {
-      await transaction`insert into commerce.orders (creation_identity, offer_id, product_id, title, amount_minor, currency, quantity, environment, offer_state) values (${rollbackIdentity}::uuid, 'offer_test_freelancer_cashflow_v1', 'prd_test_freelancer_cashflow_v1', 'Freelancer Cashflow Planner — internal commerce test offer', 4900, 'THB', 1, 'test', 'test_only')`;
+      await transaction`insert into commerce.orders (creation_identity, offer_id, product_id, title, amount_minor, currency, quantity, environment, offer_state, version_id) values (${rollbackIdentity}::uuid, 'offer_test_freelancer_cashflow_v1', 'prd_test_freelancer_cashflow_v1', 'Freelancer Cashflow Planner — internal commerce test offer', 4900, 'THB', 1, 'test', 'test_only', 'freelancer-cashflow-v1')`;
       throw new Error("rollback sentinel");
     }), "transactions roll back");
     const [rolledBack] = await sql<{ count: string }[]>`select count(*)::text as count from commerce.orders where creation_identity = ${rollbackIdentity}::uuid`;
     assert.equal(rolledBack.count, "0");
 
-    const grantRollbackIdentity = randomUUID();
-    await expectReject(() => sql.begin(async (transaction) => {
-      await transaction`set local role commerce_runtime`;
-      const persisted = await persistTrustedCommerceAttemptInTransaction(transaction, { creationIdentity: grantRollbackIdentity, idempotencyKey: randomUUID(), grantEntitlement: true });
-      assert.ok(persisted.entitlementId);
-      throw new Error("grant rollback sentinel");
-    }), "a surrounding transaction rolls back an in-transaction entitlement grant");
-    const [grantRollback] = await sql<{ orders: string; attempts: string; entitlements: string }[]>`
-      select
-        (select count(*)::text from commerce.orders where creation_identity = ${grantRollbackIdentity}::uuid) as orders,
-        (select count(*)::text from commerce.payment_attempts where order_id in (select id from commerce.orders where creation_identity = ${grantRollbackIdentity}::uuid)) as attempts,
-        (select count(*)::text from commerce.entitlements where order_id in (select id from commerce.orders where creation_identity = ${grantRollbackIdentity}::uuid)) as entitlements
-    `;
-    assert.deepEqual(grantRollback, { orders: "0", attempts: "0", entitlements: "0" });
-
-    await expectReject(() => sql`insert into commerce.orders (creation_identity, offer_id, product_id, title, amount_minor, currency, quantity, environment, offer_state) values (${randomUUID()}::uuid, 'offer_test_freelancer_cashflow_v1', 'prd_test_freelancer_cashflow_v1', 'Freelancer Cashflow Planner — internal commerce test offer', 1, 'THB', 1, 'test', 'test_only')`, "invalid price is rejected");
-    await expectReject(() => sql`insert into commerce.orders (creation_identity, offer_id, product_id, title, amount_minor, currency, quantity, environment, offer_state) values (${randomUUID()}::uuid, 'offer_test_freelancer_cashflow_v1', 'prd_test_freelancer_cashflow_v1', 'Freelancer Cashflow Planner — internal commerce test offer', 4900, 'USD', 1, 'test', 'test_only')`, "wrong currency is rejected");
-    await expectReject(() => sql`insert into commerce.orders (creation_identity, offer_id, product_id, title, amount_minor, currency, quantity, environment, offer_state) values (${randomUUID()}::uuid, 'offer_test_freelancer_cashflow_v1', 'prd_test_freelancer_cashflow_v1', 'Freelancer Cashflow Planner — internal commerce test offer', 4900, 'THB', 2, 'test', 'test_only')`, "quantity other than one is rejected");
-    await expectReject(() => sql`insert into commerce.orders (creation_identity, offer_id, product_id, title, amount_minor, currency, quantity, environment, offer_state) values (${randomUUID()}::uuid, 'offer_test_freelancer_cashflow_v1', 'prd_test_freelancer_cashflow_v1', 'Freelancer Cashflow Planner — internal commerce test offer', 4900, 'THB', 1, 'live', 'test_only')`, "non-test environments are rejected");
+    await expectReject(() => sql`insert into commerce.orders (creation_identity, offer_id, product_id, title, amount_minor, currency, quantity, environment, offer_state, version_id) values (${randomUUID()}::uuid, 'offer_test_freelancer_cashflow_v1', 'prd_test_freelancer_cashflow_v1', 'Freelancer Cashflow Planner — internal commerce test offer', 1, 'THB', 1, 'test', 'test_only', 'freelancer-cashflow-v1')`, "invalid price is rejected");
+    await expectReject(() => sql`insert into commerce.orders (creation_identity, offer_id, product_id, title, amount_minor, currency, quantity, environment, offer_state, version_id) values (${randomUUID()}::uuid, 'offer_test_freelancer_cashflow_v1', 'prd_test_freelancer_cashflow_v1', 'Freelancer Cashflow Planner — internal commerce test offer', 4900, 'USD', 1, 'test', 'test_only', 'freelancer-cashflow-v1')`, "wrong currency is rejected");
+    await expectReject(() => sql`insert into commerce.orders (creation_identity, offer_id, product_id, title, amount_minor, currency, quantity, environment, offer_state, version_id) values (${randomUUID()}::uuid, 'offer_test_freelancer_cashflow_v1', 'prd_test_freelancer_cashflow_v1', 'Freelancer Cashflow Planner — internal commerce test offer', 4900, 'THB', 2, 'test', 'test_only', 'freelancer-cashflow-v1')`, "quantity other than one is rejected");
+    await expectReject(() => sql`insert into commerce.orders (creation_identity, offer_id, product_id, title, amount_minor, currency, quantity, environment, offer_state, version_id) values (${randomUUID()}::uuid, 'offer_test_freelancer_cashflow_v1', 'prd_test_freelancer_cashflow_v1', 'Freelancer Cashflow Planner — internal commerce test offer', 4900, 'THB', 1, 'live', 'test_only', 'freelancer-cashflow-v1')`, "non-test environments are rejected");
     await expectReject(() => sql`insert into commerce.payment_attempts (order_id, provider, environment, idempotency_key, attempt_state) values (${randomUUID()}::uuid, 'stripe', 'test', ${randomUUID()}::uuid, 'created')`, "foreign keys reject attempts without orders");
 
     const [role] = await sql<{ allowed: boolean; can_login: boolean; is_superuser: boolean; bypasses_rls: boolean; owns_orders: boolean; can_create_in_commerce: boolean }[]>`
@@ -131,7 +111,7 @@ async function main() {
     }), "authenticated role is denied");
     await sql.begin(async (transaction) => {
       await transaction`set local role commerce_runtime`;
-      const runtimeOrder = await transaction<{ id: string }[]>`insert into commerce.orders (creation_identity, offer_id, product_id, title, amount_minor, currency, quantity, environment, offer_state) values (${randomUUID()}::uuid, 'offer_test_freelancer_cashflow_v1', 'prd_test_freelancer_cashflow_v1', 'Freelancer Cashflow Planner — internal commerce test offer', 4900, 'THB', 1, 'test', 'test_only') returning id`;
+      const runtimeOrder = await transaction<{ id: string }[]>`insert into commerce.orders (creation_identity, offer_id, product_id, title, amount_minor, currency, quantity, environment, offer_state, version_id) values (${randomUUID()}::uuid, 'offer_test_freelancer_cashflow_v1', 'prd_test_freelancer_cashflow_v1', 'Freelancer Cashflow Planner — internal commerce test offer', 4900, 'THB', 1, 'test', 'test_only', 'freelancer-cashflow-v1') returning id`;
       assert.ok(runtimeOrder[0]?.id);
     });
     await expectReject(() => sql.begin(async (transaction) => {
