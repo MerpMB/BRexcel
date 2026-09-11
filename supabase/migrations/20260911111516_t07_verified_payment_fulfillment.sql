@@ -11,6 +11,10 @@ begin
 end
 $$;
 
+-- T05's blanket trigger would reject the one approved T07 version backfill.
+-- It is replaced below with a field-specific immutability trigger.
+drop trigger if exists orders_snapshot_immutable on commerce.orders;
+
 alter table commerce.orders
   add column version_id text,
   add column fulfillment_status text not null default 'pending'
@@ -193,7 +197,6 @@ begin
 end;
 $$;
 
-drop trigger if exists orders_snapshot_immutable on commerce.orders;
 create trigger orders_snapshot_immutable
 before update or delete on commerce.orders
 for each row execute function commerce.reject_order_snapshot_mutation();
@@ -207,6 +210,7 @@ before insert or update or delete on commerce.entitlements
 for each row execute function commerce.enforce_verified_entitlement_source();
 
 revoke all on table commerce.provider_events from public, anon, authenticated, service_role;
+revoke all on table commerce.provider_events from commerce_runtime;
 alter table commerce.provider_events enable row level security;
 create policy commerce_runtime_provider_events_select on commerce.provider_events
   for select to commerce_runtime using (true);
