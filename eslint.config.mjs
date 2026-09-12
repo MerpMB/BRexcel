@@ -13,6 +13,9 @@ const eslintConfig = defineConfig([
     "build/**",
     ".validation-build/**",
     ".commerce-build/**",
+    ".open-next/**",
+    ".wrangler/**",
+    "worker-configuration.d.ts",
     "next-env.d.ts",
   ]),
 ]);
