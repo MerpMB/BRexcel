@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:cloudflare": "opennextjs-cloudflare build",
     "start": "next start",
     "lint": "eslint",
     "validate:publication": "tsc -p tsconfig.validation.json && node --test .validation-build/tests/publication.test.js && node .validation-build/scripts/validate-publication.js",
