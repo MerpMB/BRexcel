@@ -159,7 +159,7 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid 
 .lab-inputs label { display: grid; gap: .35rem; color: #a9bcb3; font-size: .82rem; }
 .lab-input { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; border: 1px solid #1b4635; background: var(--green-950); }
 .lab-input--selected { border-color: var(--cashflow); }
-.lab-input input { min-width: 0; width: 100%; padding: .65rem .7rem; border: 0; outline: 0; color: #eaf2ed; background: transparent; font-family: var(--font-mono); font-size: .86rem; }
+.lab-input input { min-width: 0; width: 100%; padding: .65rem .7rem; border: 0; color: #eaf2ed; background: transparent; font-family: var(--font-mono); font-size: .86rem; }
 .lab-input small { padding-right: .7rem; color: #6d9884; font-family: var(--font-mono); font-size: .58rem; }
 .scenario-buttons { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: 1rem; }
 .scenario-buttons button { padding: .55rem .65rem; color: #7fa593; font-family: var(--font-mono); font-size: .62rem; text-transform: uppercase; }
@@ -199,7 +199,7 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid 
 .showcase-blocks { display: grid; gap: .9rem; margin-top: 1rem; }
 .showcase-input { display: grid; gap: .4rem; color: var(--text); }
 .showcase-input__control { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; border: 1px solid var(--line); }
-.showcase-input input { min-width: 0; padding: .65rem; border: 0; outline: 0; }
+.showcase-input input { min-width: 0; padding: .65rem; border: 0; }
 .showcase-input small { padding-right: .65rem; color: var(--muted); }
 .showcase-output { display: flex; justify-content: space-between; gap: 1rem; padding: .8rem; background: var(--surface-soft); }
 .showcase-output strong { font-family: var(--font-mono); }

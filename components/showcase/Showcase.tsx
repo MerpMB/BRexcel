@@ -62,11 +62,12 @@ export function Showcase({ manifest, variant = "default" }: ShowcaseProps) {
           );
         }
         if (block.type === "output") {
-          const suffix = block.outputId === "savingsRate" ? "%" : " THB";
+          const isSavingsRate = block.outputId === "savingsRate";
+          const suffix = isSavingsRate ? "%" : " THB";
           return (
             <p className="showcase-output" key={block.id}>
               <span>{block.label}</span>
-              <strong>{formatValue(result.outputs[block.outputId])}{suffix}</strong>
+              <strong>{formatValue(result.outputs[block.outputId], isSavingsRate ? 1 : 0)}{suffix}</strong>
             </p>
           );
         }

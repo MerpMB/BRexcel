@@ -111,7 +111,7 @@ export default function Home() {
 
         <section className="browse-section site-width" id="browse" aria-labelledby="browse-title">
           <div className="browse-panel">
-            <div className="browse-heading"><h2 id="browse-title">Browse</h2><span>Filter by family, or start from the job</span></div>
+            <div className="browse-heading"><h2 id="browse-title">Browse</h2><span>Browse by family, or start from the job</span></div>
             <div className="filter-chips" aria-label="Catalog families">
               <span className="filter-chip filter-chip--active">All products <b>01</b></span>
               <a className="filter-chip" href="#products">Planning <b>01</b></a>
