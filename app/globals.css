@@ -42,6 +42,13 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid 
 .primary-nav a:hover, .footer-grid a:hover, .text-action:hover { color: var(--green-700); }
 .header-status { display: inline-flex; align-items: center; gap: .55rem; color: var(--muted); font-family: var(--font-mono); font-size: .68rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .header-status i { width: .46rem; height: .46rem; border: 1px solid var(--green-700); border-radius: 50%; }
+.header-meta { display: inline-flex; align-items: center; gap: 1.1rem; }
+
+.lang-switch { display: inline-flex; align-items: center; gap: .4rem; font-family: var(--font-mono); font-size: .72rem; font-weight: 700; letter-spacing: .04em; }
+.lang-switch__divider { color: var(--line); }
+.lang-switch__option { padding: .3rem .4rem; border: none; background: none; color: var(--muted); border-radius: 2px; cursor: pointer; }
+.lang-switch__option:hover { color: var(--green-700); }
+.lang-switch__option[aria-current="true"] { color: var(--ink); }
 
 .platform-hero { min-height: 42rem; display: grid; grid-template-columns: minmax(0, .9fr) minmax(32rem, 1.1fr); align-items: center; gap: clamp(3rem, 7vw, 7rem); padding-block: 4.75rem 5rem; }
 .hero-copy h1 { max-width: 11.5ch; margin: 1rem 0 1.35rem; font-size: clamp(3rem, 5.2vw, 5rem); line-height: .96; letter-spacing: -.06em; }
@@ -233,6 +240,7 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid 
 /* Existing product-detail and fixture routes */
 .page-shell { width: min(calc(100% - 2rem), 68rem); margin: 0 auto; padding: 1.25rem 0 4rem; }
 .site-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-bottom: 3.5rem; color: var(--muted); font-size: .95rem; }
+.site-header__end { display: inline-flex; align-items: center; gap: 1.1rem; }
 .wordmark { color: var(--ink); font-size: 1.25rem; font-weight: 800; letter-spacing: -.04em; }
 .back-link, .text-link { color: var(--green-700); font-weight: 700; }
 .eyebrow { margin: 0; color: var(--green-700); font-size: .78rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
@@ -240,7 +248,6 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid 
 .product-detail h1 { max-width: 15ch; margin: .75rem 0 1rem; font-size: clamp(2.6rem, 7vw, 5.25rem); line-height: .98; letter-spacing: -.06em; }
 .product-detail__summary, .detail-section p, .price-panel p, .disclosure p { color: var(--text); font-size: 1.05rem; line-height: 1.65; }
 .product-detail__summary { max-width: 43rem; font-size: 1.18rem; }
-.thai-summary { margin: .5rem 0 0; color: var(--muted); line-height: 1.65; }
 .disclosure { margin-top: 2rem; padding: 1.25rem; border-left: 4px solid var(--green-700); background: #eaf5ef; }
 .disclosure p { margin: .35rem 0 0; }
 .product-detail__grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(15rem, .8fr); gap: 2.5rem; margin-top: 3rem; }
@@ -322,7 +329,7 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid 
   .lab-bars > div, .showcase-chart > div { grid-template-columns: 4.5rem minmax(0, 1fr) 3.5rem; }
   .footer-grid { grid-template-columns: 1fr; }
   .page-shell { width: min(calc(100% - 1.5rem), 68rem); padding-top: 1rem; }
-  .site-header { align-items: flex-start; padding-bottom: 2.75rem; }
+  .site-header { align-items: flex-start; flex-wrap: wrap; gap: .6rem 1rem; padding-bottom: 2.75rem; }
   .product-detail__grid { grid-template-columns: 1fr; gap: 1.5rem; margin-top: 2.25rem; }
 }
 

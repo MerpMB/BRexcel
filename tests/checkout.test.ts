@@ -60,7 +60,7 @@ test("checkout preparation issues only when needed and never starts commerce", (
   assert.equal(issuances, 2);
   assert.deepEqual(guestCheckoutCookieOptions, { httpOnly: true, secure: true, sameSite: "lax", maxAge: 86400, path: "/checkout" });
   assert.deepEqual(checkoutSecurityHeaders, { "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" });
-  const source = readFileSync("app/checkout/prepare/route.ts", "utf8");
+  const source = readFileSync("app/(unlocalized)/checkout/prepare/route.ts", "utf8");
   assert.match(source, /NextResponse\.redirect\(new URL\("\/checkout", request\.url\), 303\)/);
   assert.equal(source.includes("startGuestHostedCheckout"), false);
   assert.equal(source.includes("persistCommercialAttempt"), false);
@@ -88,7 +88,7 @@ test("checkout start requires a pre-issued capability before commerce or Stripe"
   });
   assert.deepEqual(started, { kind: "started", capability, started: "normal checkout" });
 
-  const source = readFileSync("app/checkout/start/route.ts", "utf8");
+  const source = readFileSync("app/(unlocalized)/checkout/start/route.ts", "utf8");
   assert.equal(source.includes("createGuestPurchaseCapability"), false);
   assert.equal(source.includes("response.cookies.set"), false);
   assert.match(source, /status: 409/);
@@ -178,5 +178,5 @@ test("Stripe idempotency is stable and checkout stays server-only without fulfil
   assert.match(readFileSync("lib/commerce/stripe.ts", "utf8"), /import "server-only"/);
   assert.match(readFileSync("lib/commerce/checkout.ts", "utf8"), /import "server-only"/);
   assert.equal(readFileSync("lib/commerce/checkout-start-core.ts", "utf8").includes("grantEntitlement"), false);
-  assert.equal(readFileSync("app/checkout/success/page.tsx", "utf8").includes("ownership granted"), false);
+  assert.equal(readFileSync("app/(unlocalized)/checkout/success/page.tsx", "utf8").includes("ownership granted"), false);
 });

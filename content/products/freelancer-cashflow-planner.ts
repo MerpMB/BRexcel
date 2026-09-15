@@ -1,3 +1,9 @@
+// title/summary/benefits/compatibility/licenseSummary/fixtureDisclosure/demoDisclosure below are
+// English-only publication-contract content (see lib/catalog/publication.ts). Public storefront
+// rendering no longer reads them directly — locale-aware presentation copy for both th/en now
+// lives in lib/i18n/dictionaries/{th,en}.ts under product.freelancerCashflowPlanner. thaiSummary
+// is legacy: retained only because validateCatalog() still requires it and publication tests
+// depend on the field existing; it is not rendered by the storefront anymore.
 export const freelancerCashflowPlanner = {
   productId: "prd_01J7K9Q2M4V6X8Z0A1B3C5D7E9",
   slug: "freelancer-cashflow-planner",
