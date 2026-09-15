@@ -6,6 +6,7 @@ export const th = {
   },
   navigation: {
     homeAriaLabel: "หน้าแรก BRexcel",
+    primaryNavAriaLabel: "เมนูนำทางหลัก",
     products: "สินค้า",
     browse: "เรียกดู",
     demoLab: "Demo Lab",
@@ -29,6 +30,7 @@ export const th = {
       { value: "01", label: "เดโมแบบโต้ตอบ" },
       { value: "DEV", label: "สถานะร้านค้า" },
     ],
+    platformSummaryAriaLabel: "สรุปภาพรวมแพลตฟอร์ม",
     workbookAriaLabel: "ตัวอย่างเวิร์กบุ๊กกระแสเงินสดจำลอง",
     workbookBarTitle: "Cashflow · 01",
     workbookBarPreview: "ข้อมูลตัวอย่าง",
@@ -60,6 +62,7 @@ export const th = {
       featuredPreview: "ตัวอย่างสินค้าแนะนำ",
       statusTag: "ข้อมูลจำลอง · ยังไม่วางจำหน่าย",
       facts: ["แนวคิดสำหรับ Excel", "เดโมสดบนเบราว์เซอร์", "สองสถานการณ์จำลอง"],
+      factsAriaLabel: "ข้อมูลสรุปสินค้า",
       launchPrice: "ราคาจะประกาศเมื่อเปิดตัว",
       openDemo: "เปิดเดโม",
       viewProduct: "ดูรายละเอียดสินค้า",
@@ -72,6 +75,7 @@ export const th = {
       gapToTarget: "ส่วนต่างเป้าหมาย",
     },
     pipeline: {
+      ariaLabel: "ผลิตภัณฑ์ที่กำลังจะเปิดตัว",
       next: {
         rail: "PLANNING · 02",
         meta: "โมดูลถัดไป",
@@ -116,8 +120,13 @@ export const th = {
       cashflowPlanner: "Cashflow Planner",
       moreDemos: "เดโมเพิ่มเติมเมื่อมีสินค้าใหม่เปิดตัว",
     },
+    availableDemosAriaLabel: "เดโมสินค้าที่มีให้ทดลองใช้",
     showcase: {
       interactiveShowcase: "ตัวอย่างสินค้าแบบโต้ตอบ",
+      showcaseViewsAriaLabel: "มุมมองตัวอย่างสินค้า",
+      demoViewsAriaLabel: "มุมมองเดโม",
+      presetScenariosAriaLabel: "สถานการณ์จำลองสำเร็จรูป",
+      cashflowComparisonAriaLabel: "การเปรียบเทียบกระแสเงินสด",
       resetFixture: "รีเซ็ตข้อมูลตัวอย่าง",
       reset: "รีเซ็ต",
       panelInput: "01 · ข้อมูลนำเข้า · บาท/เดือน",

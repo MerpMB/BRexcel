@@ -105,3 +105,29 @@ test("i18n layer leaves stable product/domain truth unchanged", () => {
   assert.equal(freelancerCashflowPlanner.demoReference, "interactive-demo-not-yet-implemented");
   assert.equal(freelancerCashflowPlanner.displayPrice, "฿890");
 });
+
+test("user-facing accessibility labels on the localized storefront/showcase surfaces are translated, not hardcoded English", () => {
+  const ariaLabelPairs: [string, string, string][] = [
+    ["navigation.primaryNavAriaLabel", en.navigation.primaryNavAriaLabel, th.navigation.primaryNavAriaLabel],
+    ["home.platformSummaryAriaLabel", en.home.platformSummaryAriaLabel, th.home.platformSummaryAriaLabel],
+    ["home.workbookAriaLabel", en.home.workbookAriaLabel, th.home.workbookAriaLabel],
+    ["catalog.productCard.factsAriaLabel", en.catalog.productCard.factsAriaLabel, th.catalog.productCard.factsAriaLabel],
+    ["catalog.productCard.previewAriaLabel", en.catalog.productCard.previewAriaLabel, th.catalog.productCard.previewAriaLabel],
+    ["catalog.pipeline.ariaLabel", en.catalog.pipeline.ariaLabel, th.catalog.pipeline.ariaLabel],
+    ["catalog.browse.ariaLabel", en.catalog.browse.ariaLabel, th.catalog.browse.ariaLabel],
+    ["demo.availableDemosAriaLabel", en.demo.availableDemosAriaLabel, th.demo.availableDemosAriaLabel],
+    ["demo.showcase.showcaseViewsAriaLabel", en.demo.showcase.showcaseViewsAriaLabel, th.demo.showcase.showcaseViewsAriaLabel],
+    ["demo.showcase.demoViewsAriaLabel", en.demo.showcase.demoViewsAriaLabel, th.demo.showcase.demoViewsAriaLabel],
+    ["demo.showcase.presetScenariosAriaLabel", en.demo.showcase.presetScenariosAriaLabel, th.demo.showcase.presetScenariosAriaLabel],
+    ["demo.showcase.cashflowComparisonAriaLabel", en.demo.showcase.cashflowComparisonAriaLabel, th.demo.showcase.cashflowComparisonAriaLabel],
+    ["product.fixtureDisclosureAriaLabel", en.product.fixtureDisclosureAriaLabel, th.product.fixtureDisclosureAriaLabel],
+    ["product.availabilityAriaLabel", en.product.availabilityAriaLabel, th.product.availabilityAriaLabel],
+  ];
+
+  for (const [key, enValue, thValue] of ariaLabelPairs) {
+    assert.ok(enValue.length > 0, `${key}: English value must not be empty`);
+    assert.ok(thValue.length > 0, `${key}: Thai value must not be empty`);
+    assert.notEqual(thValue, enValue, `${key}: Thai aria-label must not be a copy of the English string`);
+    assert.ok(/[\u0E00-\u0E7F]/.test(thValue), `${key}: Thai aria-label must contain Thai script`);
+  }
+});

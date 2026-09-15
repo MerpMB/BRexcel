@@ -2,6 +2,7 @@ type Dictionary = {
   common: { brand: string };
   navigation: {
     homeAriaLabel: string;
+    primaryNavAriaLabel: string;
     products: string;
     browse: string;
     demoLab: string;
@@ -21,6 +22,7 @@ type Dictionary = {
     browseProducts: string;
     tryDemoLab: string;
     heroIndex: readonly { value: string; label: string }[];
+    platformSummaryAriaLabel: string;
     workbookAriaLabel: string;
     workbookBarTitle: string;
     workbookBarPreview: string;
@@ -39,11 +41,12 @@ type Dictionary = {
     heading: string;
     lede: string;
     productCard: {
-      featuredPreview: string; statusTag: string; facts: readonly string[]; launchPrice: string;
+      featuredPreview: string; statusTag: string; facts: readonly string[]; factsAriaLabel: string; launchPrice: string;
       openDemo: string; viewProduct: string; previewAriaLabel: string; sheet2Label: string;
       income: string; commitments: string; remaining: string; savingsRate: string; gapToTarget: string;
     };
     pipeline: {
+      ariaLabel: string;
       next: { rail: string; meta: string; status: string; title: string; body: string; family: string };
       future: { rail: string; meta: string; status: string; title: string; body: string; family: string };
     };
@@ -60,8 +63,13 @@ type Dictionary = {
     heading: string;
     lede: string;
     tabs: { cashflowPlanner: string; moreDemos: string };
+    availableDemosAriaLabel: string;
     showcase: {
       interactiveShowcase: string;
+      showcaseViewsAriaLabel: string;
+      demoViewsAriaLabel: string;
+      presetScenariosAriaLabel: string;
+      cashflowComparisonAriaLabel: string;
       resetFixture: string;
       reset: string;
       panelInput: string;
@@ -148,6 +156,7 @@ export const en: Dictionary = {
   },
   navigation: {
     homeAriaLabel: "BRexcel home",
+    primaryNavAriaLabel: "Primary navigation",
     products: "Products",
     browse: "Browse",
     demoLab: "Demo Lab",
@@ -171,6 +180,7 @@ export const en: Dictionary = {
       { value: "01", label: "Interactive demo" },
       { value: "DEV", label: "Storefront status" },
     ],
+    platformSummaryAriaLabel: "Platform summary",
     workbookAriaLabel: "Synthetic cashflow workbook preview",
     workbookBarTitle: "Cashflow · 01",
     workbookBarPreview: "Preview data",
@@ -202,6 +212,7 @@ export const en: Dictionary = {
       featuredPreview: "Featured product preview",
       statusTag: "Synthetic fixture · not for sale",
       facts: ["Excel concept", "Live browser demo", "Two scenarios"],
+      factsAriaLabel: "Product facts",
       launchPrice: "Price announced at launch",
       openDemo: "Open demo",
       viewProduct: "View product",
@@ -214,6 +225,7 @@ export const en: Dictionary = {
       gapToTarget: "Gap to target",
     },
     pipeline: {
+      ariaLabel: "Product pipeline",
       next: {
         rail: "PLANNING · 02",
         meta: "Next module",
@@ -258,8 +270,13 @@ export const en: Dictionary = {
       cashflowPlanner: "Cashflow Planner",
       moreDemos: "More demos as products ship",
     },
+    availableDemosAriaLabel: "Available product demos",
     showcase: {
       interactiveShowcase: "Interactive product showcase",
+      showcaseViewsAriaLabel: "Showcase views",
+      demoViewsAriaLabel: "Demo views",
+      presetScenariosAriaLabel: "Preset scenarios",
+      cashflowComparisonAriaLabel: "Cashflow comparison",
       resetFixture: "Reset fixture",
       reset: "Reset",
       panelInput: "01 · Input · THB / month",

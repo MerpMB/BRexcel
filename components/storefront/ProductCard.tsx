@@ -26,7 +26,7 @@ export function ProductCard({ product, index, accent, title, summary, t }: Produ
         </div>
         <h3>{title}</h3>
         <p>{summary}</p>
-        <div className="product-facts" aria-label="Product facts">
+        <div className="product-facts" aria-label={t.factsAriaLabel}>
           {t.facts.map((fact) => <span key={fact}>{fact}</span>)}
         </div>
         <div className="product-actions">

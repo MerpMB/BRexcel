@@ -7,6 +7,10 @@ import type { Locale } from "@/lib/i18n/config";
 
 export type ShowcaseCopy = {
   interactiveShowcase: string;
+  showcaseViewsAriaLabel: string;
+  demoViewsAriaLabel: string;
+  presetScenariosAriaLabel: string;
+  cashflowComparisonAriaLabel: string;
   resetFixture: string;
   reset: string;
   panelInput: string;
@@ -33,6 +37,10 @@ function format(template: string, vars: Record<string, string>) {
 
 const defaultCopy: ShowcaseCopy = {
   interactiveShowcase: "Interactive product showcase",
+  showcaseViewsAriaLabel: "Showcase views",
+  demoViewsAriaLabel: "Demo views",
+  presetScenariosAriaLabel: "Preset scenarios",
+  cashflowComparisonAriaLabel: "Cashflow comparison",
   resetFixture: "Reset fixture",
   reset: "Reset",
   panelInput: "01 · Input · THB / month",
@@ -186,7 +194,7 @@ export function Showcase({
             </button>
           ))}
         </div>
-        <div className="showcase-tabs" role="tablist" aria-label="Showcase views">
+        <div className="showcase-tabs" role="tablist" aria-label={c.showcaseViewsAriaLabel}>
           {manifest.views.map((item) => (
             <button key={item.id} type="button" role="tab" aria-selected={view === item.id} onClick={() => setView(item.id)}>
               {label(item.id, item.title)}
@@ -215,7 +223,7 @@ export function Showcase({
 
   return (
     <section className="showcase showcase--lab" aria-label={resolvedTitle}>
-      <div className="lab-view-tabs" role="tablist" aria-label="Demo views">
+      <div className="lab-view-tabs" role="tablist" aria-label={c.demoViewsAriaLabel}>
         {manifest.views.map((item) => (
           <button key={item.id} type="button" role="tab" aria-selected={view === item.id} onClick={() => setView(item.id)}>
             {label(item.id, item.title)}
@@ -246,7 +254,7 @@ export function Showcase({
                 </label>
               ))}
             </div>
-            <div className="scenario-buttons" aria-label="Preset scenarios">
+            <div className="scenario-buttons" aria-label={c.presetScenariosAriaLabel}>
               {manifest.scenarios?.map((scenario) => (
                 <button
                   key={scenario.id}
@@ -269,7 +277,7 @@ export function Showcase({
               <div><span>{formatValue(remaining)} ÷ {formatValue(income)}</span><b>{formatValue(savingsRate, 1)}%</b></div>
               <div><span>{c.targetGap}</span><b>{formatValue(targetGap)}</b></div>
             </div>
-            <div className="lab-bars" aria-label="Cashflow comparison">
+            <div className="lab-bars" aria-label={c.cashflowComparisonAriaLabel}>
               {[
                 [c.barIncome, income, "income"],
                 [c.barCommitted, commitments, "committed"],

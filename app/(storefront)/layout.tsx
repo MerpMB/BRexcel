@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import "./globals.css";
+import "@/app/globals.css";
 import { getLocale } from "@/lib/i18n/locale";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 
@@ -11,7 +11,7 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function RootLayout({ children }: LayoutProps<"/">) {
+export default async function StorefrontLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();
   return (
     <html lang={locale}>

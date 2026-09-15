@@ -37,7 +37,7 @@ export default async function Home() {
             <BrandMark />
             BRexcel
           </Link>
-          <nav className="primary-nav" aria-label="Primary navigation">
+          <nav className="primary-nav" aria-label={dict.navigation.primaryNavAriaLabel}>
             <a href="#products">{dict.navigation.products}</a>
             <a href="#browse">{dict.navigation.browse}</a>
             <a href="#demo-lab">{dict.navigation.demoLab}</a>
@@ -67,7 +67,7 @@ export default async function Home() {
               <a className="button button--primary" href="#products">{dict.home.browseProducts} <span aria-hidden="true">↓</span></a>
               <a className="button button--secondary" href="#demo-lab">{dict.home.tryDemoLab} <span aria-hidden="true">↗</span></a>
             </div>
-            <dl className="hero-index" aria-label="Platform summary">
+            <dl className="hero-index" aria-label={dict.home.platformSummaryAriaLabel}>
               {dict.home.heroIndex.map((item) => (
                 <div key={item.label}><dt>{item.value}</dt><dd>{item.label}</dd></div>
               ))}
@@ -109,7 +109,7 @@ export default async function Home() {
             summary={productCopy.summary}
             t={dict.catalog.productCard}
           />
-          <div className="pipeline-grid" aria-label="Product pipeline">
+          <div className="pipeline-grid" aria-label={dict.catalog.pipeline.ariaLabel}>
             <article className="pipeline-card">
               <div className="module-rail">{dict.catalog.pipeline.next.rail}</div>
               <div>
@@ -154,7 +154,7 @@ export default async function Home() {
               <div><p className="kicker">{dict.demo.kicker}</p><h2 id="demo-lab-title">{dict.demo.heading}</h2></div>
               <p>{dict.demo.lede}</p>
             </div>
-            <div className="demo-product-tabs" aria-label="Available product demos"><span>{dict.demo.tabs.cashflowPlanner}</span><span>{dict.demo.tabs.moreDemos}</span></div>
+            <div className="demo-product-tabs" aria-label={dict.demo.availableDemosAriaLabel}><span>{dict.demo.tabs.cashflowPlanner}</span><span>{dict.demo.tabs.moreDemos}</span></div>
             <Showcase manifest={freelancerCashflowShowcase} variant="lab" locale={locale} {...showcaseProps} />
           </div>
         </section>

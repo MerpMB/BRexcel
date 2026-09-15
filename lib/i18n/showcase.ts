@@ -12,6 +12,10 @@ export function getFreelancerCashflowShowcaseProps(messages: Messages) {
 
   const copy: ShowcaseCopy = {
     interactiveShowcase: messages.demo.showcase.interactiveShowcase,
+    showcaseViewsAriaLabel: messages.demo.showcase.showcaseViewsAriaLabel,
+    demoViewsAriaLabel: messages.demo.showcase.demoViewsAriaLabel,
+    presetScenariosAriaLabel: messages.demo.showcase.presetScenariosAriaLabel,
+    cashflowComparisonAriaLabel: messages.demo.showcase.cashflowComparisonAriaLabel,
     resetFixture: messages.demo.showcase.resetFixture,
     reset: messages.demo.showcase.reset,
     panelInput: messages.demo.showcase.panelInput,
